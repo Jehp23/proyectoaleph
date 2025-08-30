@@ -9,7 +9,7 @@ import { Money } from "@/components/ui/money"
 import { HealthBadge } from "@/components/ui/health-badge"
 import { useStore } from "@/lib/store"
 import { Zap, AlertTriangle, TrendingDown, Clock, Info, Play, BarChart3 } from "lucide-react"
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine } from "recharts"
+import { SimpleLineChart } from "@/components/ui/simple-charts"
 
 export default function LiquidationsPage() {
   const { vaults, updateBtcPrice, btcPrice } = useStore()
@@ -156,32 +156,7 @@ export default function LiquidationsPage() {
           </CardHeader>
           <CardContent>
             <div className="h-64">
-              <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={priceHistory} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
-                  <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
-                  <XAxis dataKey="time" tick={{ fontSize: 12 }} className="text-muted-foreground" />
-                  <YAxis tick={{ fontSize: 12 }} className="text-muted-foreground" />
-                  <Tooltip
-                    contentStyle={{
-                      backgroundColor: "hsl(var(--card))",
-                      border: "1px solid hsl(var(--border))",
-                      borderRadius: "8px",
-                    }}
-                    formatter={(value, name) => [
-                      name === "price" ? `$${value.toLocaleString()}` : value,
-                      name === "price" ? "Precio BTC" : "Liquidaciones",
-                    ]}
-                  />
-                  <Line
-                    type="monotone"
-                    dataKey="price"
-                    stroke="hsl(var(--primary))"
-                    strokeWidth={2}
-                    dot={{ fill: "hsl(var(--primary))", strokeWidth: 2, r: 4 }}
-                  />
-                  <ReferenceLine y={42000} stroke="hsl(var(--danger))" strokeDasharray="5 5" />
-                </LineChart>
-              </ResponsiveContainer>
+              <SimpleLineChart data={priceHistory} />
             </div>
           </CardContent>
         </Card>

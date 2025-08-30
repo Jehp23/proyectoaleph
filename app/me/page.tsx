@@ -14,7 +14,7 @@ import { LiquidationWarning } from "@/components/ui/liquidation-warning"
 import { useStore } from "@/lib/store"
 import { Wallet, Eye, Plus, Minus, Shield, PieChart, AlertTriangle } from "lucide-react"
 import Link from "next/link"
-import { PieChart as RechartsPieChart, Cell, ResponsiveContainer, Tooltip, Legend, Pie } from "recharts"
+import { SimplePieChart } from "@/components/ui/simple-charts"
 
 const statusConfig = {
   Active: { label: "Activo", variant: "default" as const },
@@ -318,25 +318,7 @@ export default function MyVaultsPage() {
                 </CardHeader>
                 <CardContent>
                   <div className="h-64">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <RechartsPieChart>
-                        <Pie
-                          data={healthChartData}
-                          cx="50%"
-                          cy="50%"
-                          innerRadius={40}
-                          outerRadius={80}
-                          paddingAngle={5}
-                          dataKey="value"
-                        >
-                          {healthChartData.map((entry, index) => (
-                            <Cell key={`cell-${index}`} fill={entry.fill} />
-                          ))}
-                        </Pie>
-                        <Tooltip />
-                        <Legend />
-                      </RechartsPieChart>
-                    </ResponsiveContainer>
+                    <SimplePieChart data={healthChartData} />
                   </div>
                 </CardContent>
               </Card>
