@@ -71,19 +71,10 @@ export default function NewVaultPage() {
 
   // Health factor calculation with exact precision
   const healthFactor = (() => {
-    console.log("[v0] Health factor calculation:", {
-      btcCollateralSatoshis: btcCollateralSatoshis.toString(),
-      borrowAmountUsdt: borrowAmountUsdt.toString(),
-      btcPriceBigInt: btcPriceBigInt.toString(),
-      liquidationThresholdBP: liquidationThresholdBP.toString(),
-    })
-
     if (btcCollateralSatoshis <= 0) {
-      console.log("[v0] No collateral, returning 0")
       return BigInt(0) // No collateral = no health factor
     }
     if (borrowAmountUsdt <= 0) {
-      console.log("[v0] No debt, returning infinite")
       return BigInt(999) * PRECISION_CONSTANTS.HEALTH_FACTOR_MULTIPLIER // No debt = infinite health factor
     }
 
@@ -93,7 +84,6 @@ export default function NewVaultPage() {
       btcPriceBigInt,
       liquidationThresholdBP,
     )
-    console.log("[v0] Calculated health factor:", result.toString())
     return result
   })()
 
@@ -107,7 +97,6 @@ export default function NewVaultPage() {
     }
 
     const displayValue = safeToNumber(healthFactor, PRECISION_CONSTANTS.HEALTH_FACTOR_DECIMALS)
-    console.log("[v0] Health factor display value:", displayValue)
     return displayValue
   })()
 

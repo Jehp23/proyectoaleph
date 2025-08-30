@@ -19,14 +19,14 @@ export const PRECISION_CONSTANTS = {
   USDT_DECIMALS: 6,
   PRICE_DECIMALS: 8,
   PERCENTAGE_DECIMALS: 4,
-  HEALTH_FACTOR_DECIMALS: 6,
+  HEALTH_FACTOR_DECIMALS: 3,
 
   // BigInt constants to avoid repeated calculations
   BTC_SATOSHI_MULTIPLIER: BigInt(100000000), // 10^8
   USDT_WEI_MULTIPLIER: BigInt(1000000), // 10^6
   PRICE_MULTIPLIER: BigInt(100000000), // 10^8
   PERCENTAGE_MULTIPLIER: BigInt(10000), // 10^4 (for basis points)
-  HEALTH_FACTOR_MULTIPLIER: BigInt(1000000), // 10^6
+  HEALTH_FACTOR_MULTIPLIER: BigInt(1000), // 10^3
 } as const
 
 /**
@@ -145,7 +145,7 @@ export function calculateLTV(
 
 /**
  * Calculate Health Factor with exact precision
- * Returns health factor in 6 decimal precision
+ * Returns health factor in 3 decimal precision
  */
 export function calculateHealthFactor(
   collateralAmount: bigint, // in satoshis
