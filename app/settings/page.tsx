@@ -1,5 +1,7 @@
 "use client"
 
+import type React from "react"
+
 import { useState, useEffect } from "react"
 import { MainLayout } from "@/components/layout/main-layout"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -10,6 +12,17 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Separator } from "@/components/ui/separator"
 import { Settings, Code, Save, Globe, Palette, Sun, Moon } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
+import { loadAddresses, saveAddresses, clearAddresses, loadFromEnv } from "@/lib/addresses"
+import { isAddress } from "viem"
+
+type FormState = {
+  VAULT_MANAGER: string
+  WBTC: string
+  MUSD: string
+  ORACLE: string
+}
+
+const empty: FormState = { VAULT_MANAGER: "", WBTC: "", MUSD: "", ORACLE: "" }
 
 export default function SettingsPage() {
   const { toast } = useToast()
@@ -17,16 +30,35 @@ export default function SettingsPage() {
   // Settings state
   const [language, setLanguage] = useState("es")
   const [theme, setTheme] = useState("dark")
-  const [vaultManagerAddress, setVaultManagerAddress] = useState("0x742d35Cc6634C0532925a3b8D4C9db96590b5c8e")
-  const [btcTokenAddress, setBtcTokenAddress] = useState("0xA0b86a33E6441b8dB4B2b8b8b8b8b8b8b8b8b8b8")
-  const [usdtTokenAddress, setUsdtTokenAddress] = useState("0xdAC17F958D2ee523a2206206994597C13D831ec7")
-  const [oracleAddress, setOracleAddress] = useState("0x5f4eC3Df9cbd43714FE2740f5E3616155c5b8419")
+  const [form, setForm] = useState<FormState>(empty)
+  const [error, setError] = useState<string | null>(null)
+  const [saved, setSaved] = useState(false)
 
   // Theme initialization and persistence
   useEffect(() => {
     const savedTheme = localStorage.getItem("theme") || "dark"
     setTheme(savedTheme)
     document.documentElement.classList.toggle("dark", savedTheme === "dark")
+  }, [])
+
+  useEffect(() => {
+    const a = loadAddresses()
+    if (a) {
+      setForm({
+        VAULT_MANAGER: a.VAULT_MANAGER,
+        WBTC: a.WBTC,
+        MUSD: a.MUSD,
+        ORACLE: a.ORACLE,
+      })
+    } else {
+      const env = loadFromEnv()
+      setForm({
+        VAULT_MANAGER: env.VAULT_MANAGER ?? "",
+        WBTC: env.WBTC ?? "",
+        MUSD: env.MUSD ?? "",
+        ORACLE: env.ORACLE ?? "",
+      })
+    }
   }, [])
 
   // Theme change handler
@@ -40,22 +72,76 @@ export default function SettingsPage() {
     })
   }
 
+  const onChange = (k: keyof FormState) => (e: React.ChangeEvent<HTMLInputElement>) => {
+    setSaved(false)
+    setError(null)
+    setForm((prev) => ({ ...prev, [k]: e.target.value.trim() }))
+  }
+
+  const validate = (f: FormState): string | null => {
+    for (const k of ["VAULT_MANAGER", "WBTC", "MUSD", "ORACLE"] as (keyof FormState)[]) {
+      const v = f[k]
+      if (!isAddress(v as `0x${string}`)) return `Campo ${k} inválido: debe ser una dirección 0x…`
+    }
+    return null
+  }
+
   const handleSaveContracts = () => {
-    // In a real app, this would save to localStorage or backend
+    const err = validate(form)
+    if (err) {
+      setError(err)
+      setSaved(false)
+      toast({
+        title: "Error de validación",
+        description: err,
+        variant: "destructive",
+      })
+      return
+    }
+    const res = saveAddresses(form as any)
+    if (!res.ok) {
+      setError(res.error ?? "Error al guardar")
+      setSaved(false)
+      toast({
+        title: "Error al guardar",
+        description: res.error ?? "Error al guardar",
+        variant: "destructive",
+      })
+      return
+    }
+    setSaved(true)
     toast({
       title: "Configuración guardada",
-      description: "Las direcciones de contratos han sido actualizadas correctamente.",
+      description: "Las direcciones han sido guardadas. Recargando aplicación...",
     })
+    // refrescar para que lib/contracts.ts lea las nuevas direcciones
+    setTimeout(() => window.location.reload(), 1000)
   }
 
   const handleResetToDefaults = () => {
-    setVaultManagerAddress("0x742d35Cc6634C0532925a3b8D4C9db96590b5c8e")
-    setBtcTokenAddress("0xA0b86a33E6441b8dB4B2b8b8b8b8b8b8b8b8b8b8")
-    setUsdtTokenAddress("0xdAC17F958D2ee523a2206206994597C13D831ec7")
-    setOracleAddress("0x5f4eC3Df9cbd43714FE2740f5E3616155c5b8419")
+    clearAddresses()
+    setForm(empty)
+    setSaved(false)
+    setError(null)
     toast({
-      title: "Configuración restablecida",
-      description: "Se han restaurado los valores por defecto.",
+      title: "Configuración limpiada",
+      description: "Se han eliminado todas las direcciones guardadas.",
+    })
+  }
+
+  const handleLoadFromEnv = () => {
+    const env = loadFromEnv()
+    setForm({
+      VAULT_MANAGER: env.VAULT_MANAGER ?? "",
+      WBTC: env.WBTC ?? "",
+      MUSD: env.MUSD ?? "",
+      ORACLE: env.ORACLE ?? "",
+    })
+    setSaved(false)
+    setError(null)
+    toast({
+      title: "Cargado desde ENV",
+      description: "Se han cargado las direcciones desde las variables de entorno.",
     })
   }
 
@@ -137,7 +223,7 @@ export default function SettingsPage() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Code className="h-5 w-5" />
-              Desarrolladores
+              Direcciones del Protocolo
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-6">
@@ -145,10 +231,9 @@ export default function SettingsPage() {
               <div className="flex items-start gap-2">
                 <Code className="h-5 w-5 text-yellow-500 mt-0.5" />
                 <div className="text-sm">
-                  <div className="font-medium text-yellow-500 mb-1">Configuración avanzada</div>
+                  <div className="font-medium text-yellow-500 mb-1">Configuración de contratos</div>
                   <p className="text-muted-foreground">
-                    Estas configuraciones son para desarrolladores. Cambiar estas direcciones puede afectar el
-                    funcionamiento de la aplicación.
+                    Pega las direcciones de los contratos. Se guardan localmente en tu navegador (no en el servidor).
                   </p>
                 </div>
               </div>
@@ -157,11 +242,11 @@ export default function SettingsPage() {
             {/* Contract Addresses */}
             <div className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="vault-manager">Dirección del VaultManager</Label>
+                <Label htmlFor="vault-manager">VAULT_MANAGER</Label>
                 <Input
                   id="vault-manager"
-                  value={vaultManagerAddress}
-                  onChange={(e) => setVaultManagerAddress(e.target.value)}
+                  value={form.VAULT_MANAGER}
+                  onChange={onChange("VAULT_MANAGER")}
                   placeholder="0x..."
                   className="font-mono text-sm"
                 />
@@ -169,11 +254,11 @@ export default function SettingsPage() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="btc-token">Dirección del token BTC</Label>
+                <Label htmlFor="wbtc">WBTC</Label>
                 <Input
-                  id="btc-token"
-                  value={btcTokenAddress}
-                  onChange={(e) => setBtcTokenAddress(e.target.value)}
+                  id="wbtc"
+                  value={form.WBTC}
+                  onChange={onChange("WBTC")}
                   placeholder="0x..."
                   className="font-mono text-sm"
                 />
@@ -181,29 +266,34 @@ export default function SettingsPage() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="usdt-token">Dirección del token USDT</Label>
+                <Label htmlFor="musd">MUSD</Label>
                 <Input
-                  id="usdt-token"
-                  value={usdtTokenAddress}
-                  onChange={(e) => setUsdtTokenAddress(e.target.value)}
+                  id="musd"
+                  value={form.MUSD}
+                  onChange={onChange("MUSD")}
                   placeholder="0x..."
                   className="font-mono text-sm"
                 />
-                <p className="text-xs text-muted-foreground">Token ERC-20 utilizado para los préstamos (USDT)</p>
+                <p className="text-xs text-muted-foreground">Token ERC-20 utilizado para los préstamos (mUSD)</p>
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="oracle-address">Dirección del Oracle de precios</Label>
+                <Label htmlFor="oracle">ORACLE</Label>
                 <Input
-                  id="oracle-address"
-                  value={oracleAddress}
-                  onChange={(e) => setOracleAddress(e.target.value)}
+                  id="oracle"
+                  value={form.ORACLE}
+                  onChange={onChange("ORACLE")}
                   placeholder="0x..."
                   className="font-mono text-sm"
                 />
-                <p className="text-xs text-muted-foreground">Oracle de Chainlink para el precio BTC/USD</p>
+                <p className="text-xs text-muted-foreground">Oracle de precios para BTC/USD</p>
               </div>
             </div>
+
+            {error && <div className="mt-2 text-sm text-red-600">⚠️ {error}</div>}
+            {saved && !error && (
+              <div className="mt-2 text-sm text-green-700">✅ Direcciones guardadas. Recargando…</div>
+            )}
 
             <Separator />
 
@@ -211,10 +301,13 @@ export default function SettingsPage() {
             <div className="flex gap-3">
               <Button onClick={handleSaveContracts} className="gap-2">
                 <Save className="h-4 w-4" />
-                Guardar configuración
+                Guardar
+              </Button>
+              <Button variant="outline" onClick={handleLoadFromEnv} className="gap-2 bg-transparent">
+                Cargar de ENV
               </Button>
               <Button variant="outline" onClick={handleResetToDefaults} className="gap-2 bg-transparent">
-                Restablecer por defecto
+                Limpiar
               </Button>
             </div>
 
@@ -230,8 +323,8 @@ export default function SettingsPage() {
                   <span className="font-medium">11155111</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-muted-foreground">Estado:</span>
-                  <span className="font-medium text-green-500">Conectado</span>
+                  <span className="text-muted-foreground">Clave localStorage:</span>
+                  <span className="font-medium font-mono text-xs">protocol.addresses</span>
                 </div>
               </div>
             </div>
