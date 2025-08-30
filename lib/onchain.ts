@@ -97,3 +97,35 @@ export async function readVaultData(user: `0x${string}`): Promise<VaultData | nu
     }
   }
 }
+
+export async function readOracleOwner(): Promise<`0x${string}` | null> {
+  const addrs = loadAddresses()
+  if (!addrs) return null
+  try {
+    const owner = (await publicClient.readContract({
+      address: addrs.ORACLE,
+      abi: ABIS.oracle,
+      functionName: "owner", // Ownable.owner()
+      args: [],
+    })) as `0x${string}`
+    return owner
+  } catch {
+    return null
+  }
+}
+
+export async function readPriceE8(): Promise<bigint | null> {
+  const addrs = loadAddresses()
+  if (!addrs) return null
+  try {
+    const res = (await publicClient.readContract({
+      address: addrs.ORACLE,
+      abi: ABIS.oracle,
+      functionName: "getPrice",
+      args: [addrs.WBTC],
+    })) as bigint
+    return res
+  } catch {
+    return null
+  }
+}

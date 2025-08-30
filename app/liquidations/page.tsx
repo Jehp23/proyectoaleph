@@ -8,13 +8,16 @@ import { Badge } from "@/components/ui/badge"
 import { Money } from "@/components/ui/money"
 import { HealthBadge } from "@/components/ui/health-badge"
 import { useStore } from "@/lib/store"
-import { Zap, AlertTriangle, TrendingDown, Clock, Info, Play, BarChart3 } from "lucide-react"
+import { useOracleAdmin } from "@/hooks/useOracleAdmin"
+import { Zap, AlertTriangle, TrendingDown, Clock, Info, Play, BarChart3, Settings } from "lucide-react"
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine } from "recharts"
 
 export default function LiquidationsPage() {
   const { vaults, updateBtcPrice, btcPrice } = useStore()
   const [isSimulating, setIsSimulating] = useState(false)
   const [simulationPrice, setSimulationPrice] = useState(btcPrice)
+
+  const { isOwner, oracleOwner, priceUsd, drop10, drop20, resetTo, busy, error } = useOracleAdmin()
 
   const liquidatedVaults = vaults.filter((vault) => vault.status === "Liquidated")
   const criticalVaults = vaults.filter((vault) => vault.status === "Active" && vault.healthLevel === "Critical")
@@ -59,6 +62,68 @@ export default function LiquidationsPage() {
           <Zap className="h-6 w-6 text-primary" />
           <h1 className="text-3xl font-bold">Liquidaciones</h1>
         </div>
+
+        <Card className="bg-orange-500/5 border-orange-500/20">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Settings className="h-5 w-5 text-orange-500" />
+              Control de Oráculo (Demo)
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="rounded-xl border p-4 mb-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <div className="text-sm text-gray-500">Precio BTC (Oracle)</div>
+                  <div className="text-2xl font-mono">
+                    ${priceUsd?.toLocaleString(undefined, { maximumFractionDigits: 2 }) ?? "…"}
+                  </div>
+                </div>
+                <div className="text-right text-sm">
+                  <div>Owner del oráculo:</div>
+                  <div className="font-mono text-xs">{oracleOwner ?? "desconocido"}</div>
+                </div>
+              </div>
+
+              <div className="mt-4 flex gap-2 flex-wrap">
+                <button
+                  disabled={!isOwner || busy}
+                  title={!isOwner ? "Solo el owner del oráculo puede cambiar el precio (demo)" : undefined}
+                  onClick={drop10}
+                  className={`px-4 py-2 rounded-lg ${!isOwner ? "opacity-60 cursor-not-allowed border" : "bg-black text-white hover:bg-gray-800"}`}
+                >
+                  –10%
+                </button>
+
+                <button
+                  disabled={!isOwner || busy}
+                  title={!isOwner ? "Solo el owner del oráculo puede cambiar el precio (demo)" : undefined}
+                  onClick={drop20}
+                  className={`px-4 py-2 rounded-lg ${!isOwner ? "opacity-60 cursor-not-allowed border" : "bg-black text-white hover:bg-gray-800"}`}
+                >
+                  –20%
+                </button>
+
+                <button
+                  disabled={!isOwner || busy}
+                  title={!isOwner ? "Solo el owner del oráculo puede cambiar el precio (demo)" : undefined}
+                  onClick={() => resetTo(60000)}
+                  className={`px-4 py-2 rounded-lg ${!isOwner ? "opacity-60 cursor-not-allowed border" : "bg-black text-white hover:bg-gray-800"}`}
+                >
+                  Reset a 60,000
+                </button>
+              </div>
+
+              {error && <div className="mt-3 text-sm text-red-600">⚠️ {error}</div>}
+              {busy && <div className="mt-3 text-sm">⏳ Enviando transacción…</div>}
+              {!isOwner && oracleOwner && (
+                <div className="mt-3 text-sm text-orange-600">
+                  ℹ️ Solo el owner del oráculo puede modificar precios para demo de liquidaciones
+                </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
 
         {/* Educational Section */}
         <Card className="bg-blue-500/5 border-blue-500/20">
