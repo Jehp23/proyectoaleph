@@ -1,6 +1,4 @@
 "use client"
-
-import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Home, PlusCircle, Search, Wallet, Settings, Menu, Zap } from "lucide-react"
 import Link from "next/link"
@@ -25,13 +23,9 @@ export function Sidebar() {
     <div className="flex h-full flex-col">
       <div className="flex-1 space-y-2 p-4">
         {navigation.map((item) => {
-          const isActive = pathname === item.href
           return (
             <Link key={item.name} href={item.href} onClick={() => setOpen(false)}>
-              <Button
-                variant={isActive ? "secondary" : "ghost"}
-                className={cn("w-full justify-start gap-3 text-left", isActive && "bg-accent")}
-              >
+              <Button variant="ghost" className="w-full justify-start gap-3 text-left">
                 <item.icon className="h-5 w-5" />
                 {item.name}
               </Button>
@@ -74,14 +68,9 @@ export function Sidebar() {
         <div className="fixed bottom-0 left-0 right-0 z-40 bg-card border-t md:hidden">
           <div className="flex items-center justify-around py-2">
             {navigation.slice(0, 5).map((item) => {
-              const isActive = pathname === item.href
               return (
                 <Link key={item.name} href={item.href}>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className={cn("flex flex-col gap-1 h-auto py-2 px-3", isActive && "text-primary")}
-                  >
+                  <Button variant="ghost" size="sm" className="flex flex-col gap-1 h-auto py-2 px-3">
                     <item.icon className="h-4 w-4" />
                     <span className="text-xs">{item.name.split(" ")[0]}</span>
                   </Button>
