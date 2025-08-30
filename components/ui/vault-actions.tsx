@@ -1,50 +1,64 @@
 "use client"
 
-import { useState } from 'react'
-import { useVault } from '@/hooks/useVault'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { Separator } from '@/components/ui/separator'
-import { PlusCircle, MinusCircle, DollarSign, X } from 'lucide-react'
-import { formatUnits } from 'viem'
+import { useState } from "react"
+import { useVault } from "@/hooks/useVault"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Separator } from "@/components/ui/separator"
+import { PlusCircle, MinusCircle, DollarSign, X } from "lucide-react"
+import { toast } from "@/components/ui/use-toast"
+import { bigIntToString, PRECISION_CONSTANTS } from "@/lib/precision-math"
 
 export function VaultActions() {
   const { vault, balances, depositCollateral, withdrawCollateral, borrow, repay, closeVault, isLoading } = useVault()
   const [amounts, setAmounts] = useState({
-    deposit: '',
-    withdraw: '',
-    borrow: '',
-    repay: ''
+    deposit: "",
+    withdraw: "",
+    borrow: "",
+    repay: "",
   })
 
   const handleAmountChange = (action: string, value: string) => {
-    setAmounts(prev => ({ ...prev, [action]: value }))
+    setAmounts((prev) => ({ ...prev, [action]: value }))
   }
 
   const handleAction = async (action: string) => {
     const amount = amounts[action as keyof typeof amounts]
-    if (!amount || parseFloat(amount) <= 0) return
 
-    switch (action) {
-      case 'deposit':
-        await depositCollateral(amount)
-        break
-      case 'withdraw':
-        await withdrawCollateral(amount)
-        break
-      case 'borrow':
-        await borrow(amount)
-        break
-      case 'repay':
-        await repay(amount)
-        break
+    if (!amount || amount.trim() === "") {
+      toast({
+        title: "Error",
+        description: "Ingresa una cantidad válida",
+        variant: "destructive",
+      })
+      return
     }
 
-    // Clear input after action
-    setAmounts(prev => ({ ...prev, [action]: '' }))
+    try {
+      switch (action) {
+        case "deposit":
+          await depositCollateral(amount)
+          break
+        case "withdraw":
+          await withdrawCollateral(amount)
+          break
+        case "borrow":
+          await borrow(amount)
+          break
+        case "repay":
+          await repay(amount)
+          break
+      }
+
+      // Clear input after successful action
+      setAmounts((prev) => ({ ...prev, [action]: "" }))
+    } catch (error) {
+      // Error handling is now done in the hook functions
+      console.error(`Error in ${action}:`, error)
+    }
   }
 
   if (!vault?.isActive) {
@@ -83,12 +97,14 @@ export function VaultActions() {
                   type="number"
                   placeholder="0.0"
                   value={amounts.deposit}
-                  onChange={(e) => handleAmountChange('deposit', e.target.value)}
+                  onChange={(e) => handleAmountChange("deposit", e.target.value)}
                   step="0.0001"
+                  min="0"
+                  max={bigIntToString(balances.wbtc, PRECISION_CONSTANTS.BTC_DECIMALS, 4)}
                 />
-                <Button 
-                  onClick={() => handleAction('deposit')}
-                  disabled={isLoading || !amounts.deposit}
+                <Button
+                  onClick={() => handleAction("deposit")}
+                  disabled={isLoading || !amounts.deposit || Number.parseFloat(amounts.deposit) <= 0}
                   className="gap-2"
                 >
                   <PlusCircle className="h-4 w-4" />
@@ -96,7 +112,7 @@ export function VaultActions() {
                 </Button>
               </div>
               <p className="text-xs text-muted-foreground">
-                Balance: {formatUnits(balances.wbtc, 8)} WBTC
+                Balance: {bigIntToString(balances.wbtc, PRECISION_CONSTANTS.BTC_DECIMALS, 4)} WBTC
               </p>
             </div>
 
@@ -111,12 +127,14 @@ export function VaultActions() {
                   type="number"
                   placeholder="0.0"
                   value={amounts.withdraw}
-                  onChange={(e) => handleAmountChange('withdraw', e.target.value)}
+                  onChange={(e) => handleAmountChange("withdraw", e.target.value)}
                   step="0.0001"
+                  min="0"
+                  max={bigIntToString(vault.collateralAmount, PRECISION_CONSTANTS.BTC_DECIMALS, 4)}
                 />
-                <Button 
-                  onClick={() => handleAction('withdraw')}
-                  disabled={isLoading || !amounts.withdraw}
+                <Button
+                  onClick={() => handleAction("withdraw")}
+                  disabled={isLoading || !amounts.withdraw || Number.parseFloat(amounts.withdraw) <= 0}
                   variant="outline"
                   className="gap-2"
                 >
@@ -125,7 +143,7 @@ export function VaultActions() {
                 </Button>
               </div>
               <p className="text-xs text-muted-foreground">
-                Depositado: {formatUnits(vault.collateralAmount, 8)} WBTC
+                Depositado: {bigIntToString(vault.collateralAmount, PRECISION_CONSTANTS.BTC_DECIMALS, 4)} WBTC
               </p>
             </div>
           </TabsContent>
@@ -140,21 +158,21 @@ export function VaultActions() {
                   type="number"
                   placeholder="0.0"
                   value={amounts.borrow}
-                  onChange={(e) => handleAmountChange('borrow', e.target.value)}
+                  onChange={(e) => handleAmountChange("borrow", e.target.value)}
                   step="1"
+                  min="0"
+                  max={bigIntToString(vault.maxBorrowAmount, PRECISION_CONSTANTS.USDT_DECIMALS, 2)}
                 />
-                <Button 
-                  onClick={() => handleAction('borrow')}
-                  disabled={isLoading || !amounts.borrow}
+                <Button
+                  onClick={() => handleAction("borrow")}
+                  disabled={isLoading || !amounts.borrow || Number.parseFloat(amounts.borrow) <= 0}
                   className="gap-2"
                 >
                   <DollarSign className="h-4 w-4" />
                   Pedir
                 </Button>
               </div>
-              <p className="text-xs text-muted-foreground">
-                LTV actual: {vault.ltv}% (máx: 60%)
-              </p>
+              <p className="text-xs text-muted-foreground">LTV actual: {vault.ltv}% (máx: 60%)</p>
             </div>
 
             <Separator />
@@ -168,12 +186,14 @@ export function VaultActions() {
                   type="number"
                   placeholder="0.0"
                   value={amounts.repay}
-                  onChange={(e) => handleAmountChange('repay', e.target.value)}
+                  onChange={(e) => handleAmountChange("repay", e.target.value)}
                   step="1"
+                  min="0"
+                  max={bigIntToString(vault.debtAmount + vault.accruedInterest, PRECISION_CONSTANTS.USDT_DECIMALS, 2)}
                 />
-                <Button 
-                  onClick={() => handleAction('repay')}
-                  disabled={isLoading || !amounts.repay}
+                <Button
+                  onClick={() => handleAction("repay")}
+                  disabled={isLoading || !amounts.repay || Number.parseFloat(amounts.repay) <= 0}
                   variant="outline"
                   className="gap-2"
                 >
@@ -182,10 +202,11 @@ export function VaultActions() {
                 </Button>
               </div>
               <p className="text-xs text-muted-foreground">
-                Deuda total: {formatUnits(vault.debtAmount + vault.accruedInterest, 18)} mUSD
+                Deuda total:{" "}
+                {bigIntToString(vault.debtAmount + vault.accruedInterest, PRECISION_CONSTANTS.USDT_DECIMALS, 2)} mUSD
               </p>
               <p className="text-xs text-muted-foreground">
-                Balance: {formatUnits(balances.musd, 18)} mUSD
+                Balance: {bigIntToString(balances.musd, PRECISION_CONSTANTS.USDT_DECIMALS, 2)} mUSD
               </p>
             </div>
           </TabsContent>
@@ -197,12 +218,7 @@ export function VaultActions() {
                 <p className="text-sm text-muted-foreground mb-3">
                   Repaga toda la deuda y retira todo el colateral. Esta acción cerrará permanentemente tu vault.
                 </p>
-                <Button 
-                  onClick={closeVault}
-                  disabled={isLoading}
-                  variant="destructive"
-                  className="gap-2"
-                >
+                <Button onClick={closeVault} disabled={isLoading} variant="destructive" className="gap-2">
                   <X className="h-4 w-4" />
                   Cerrar Vault
                 </Button>
@@ -211,8 +227,8 @@ export function VaultActions() {
               <div className="p-4 bg-yellow-500/10 border border-yellow-500/20 rounded-lg">
                 <h4 className="font-medium mb-2 text-yellow-600">⚠️ Advertencia</h4>
                 <p className="text-sm text-muted-foreground">
-                  Asegúrate de mantener un Health Factor saludable (>1.2) para evitar liquidaciones.
-                  El precio de liquidación actual es ${vault.liquidationPrice.toFixed(2)}.
+                  Asegúrate de mantener un Health Factor saludable ({">"} 1.2) para evitar liquidaciones. El precio de
+                  liquidación actual es ${vault.liquidationPrice.toFixed(2)}.
                 </p>
               </div>
             </div>

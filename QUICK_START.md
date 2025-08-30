@@ -8,7 +8,7 @@
 - Infura/Alchemy API key
 
 ### 1. Setup (2 min)
-```bash
+\`\`\`bash
 # Clonar e instalar
 git clone <repo>
 cd proyectoaleph
@@ -17,41 +17,41 @@ npm install
 # Configurar environment
 cp env.example .env
 # Editar .env con tus keys
-```
+\`\`\`
 
 ### 2. Deploy (2 min)
-```bash
+\`\`\`bash
 # Compilar y deployar
 npm run compile
 npm run deploy:sepolia
 npm run seed:sepolia
 
 # Actualizar .env con contract addresses
-```
+\`\`\`
 
 ### 3. Demo (1 min)
-```bash
+\`\`\`bash
 # Iniciar app
 npm run dev
 
 # Abrir http://localhost:3000/demo
 # Conectar wallet → Crear vault → Simular crisis
-```
+\`\`\`
 
 ## 🔧 Variables de Entorno Mínimas
 
-```env
+\`\`\`env
 # Obligatorias
-NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID=tu_project_id
-NEXT_PUBLIC_SEPOLIA_RPC_URL=https://sepolia.infura.io/v3/TU_KEY
-PRIVATE_KEY=tu_private_key
+NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID=your_walletconnect_project_id
+NEXT_PUBLIC_SEPOLIA_RPC_URL=https://sepolia.infura.io/v3/YOUR_INFURA_PROJECT_ID
+PRIVATE_KEY=your_private_key_here
 
 # Se completan automáticamente después del deploy
 NEXT_PUBLIC_WBTC_ADDRESS=
 NEXT_PUBLIC_MUSD_ADDRESS=
 NEXT_PUBLIC_ORACLE_ADDRESS=
 NEXT_PUBLIC_VAULT_MANAGER_ADDRESS=
-```
+\`\`\`
 
 ## 🎬 Script de Demo
 

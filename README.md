@@ -32,36 +32,36 @@ CauciónBTC es una dApp de cauciones cripto donde usuarios depositan WBTC como c
 - **Zustand** para estado global
 
 ### Parámetros del Protocolo
-```
+\`\`\`
 Max LTV: 60%
 Liquidation Threshold: 70%
 APR: 12%
 Liquidation Bonus: 10%
-```
+\`\`\`
 
 ## 🚀 Quick Start
 
 ### 1. Instalar Dependencias
-```bash
+\`\`\`bash
 npm install
-```
+\`\`\`
 
 ### 2. Configurar Environment
-```bash
+\`\`\`bash
 cp env.example .env
 # Editar .env con tus keys
-```
+\`\`\`
 
 ### 3. Deploy Contratos
-```bash
+\`\`\`bash
 npm run deploy:sepolia
 npm run seed:sepolia
-```
+\`\`\`
 
 ### 4. Iniciar Aplicación
-```bash
+\`\`\`bash
 npm run dev
-```
+\`\`\`
 
 ## 🎬 Demo Script (3-4 min)
 
@@ -73,7 +73,7 @@ npm run dev
 
 ## 📁 Estructura del Proyecto
 
-```
+\`\`\`
 ├── contracts/           # Smart contracts
 │   ├── VaultManager.sol
 │   ├── MockOracle.sol
@@ -84,25 +84,25 @@ npm run dev
 ├── components/        # Componentes React
 ├── hooks/             # Hooks wagmi personalizados
 └── lib/               # Utilidades y configuración
-```
+\`\`\`
 
 ## 🔧 Comandos Disponibles
 
 ### Desarrollo
-```bash
+\`\`\`bash
 npm run dev          # Desarrollo local
 npm run build        # Build producción
 npm run lint         # Linter
-```
+\`\`\`
 
 ### Blockchain
-```bash
+\`\`\`bash
 npm run compile      # Compilar contratos
 npm run test         # Tests
 npm run deploy:sepolia    # Deploy Sepolia
 npm run seed:sepolia      # Datos demo
 npm run simulate-drop     # Simular caída precio
-```
+\`\`\`
 
 ## 🛡️ Seguridad
 

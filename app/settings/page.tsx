@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { MainLayout } from "@/components/layout/main-layout"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Separator } from "@/components/ui/separator"
-import { Settings, Code, Save, Globe, Palette } from "lucide-react"
+import { Settings, Code, Save, Globe, Palette, Sun, Moon } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 
 export default function SettingsPage() {
@@ -21,6 +21,24 @@ export default function SettingsPage() {
   const [btcTokenAddress, setBtcTokenAddress] = useState("0xA0b86a33E6441b8dB4B2b8b8b8b8b8b8b8b8b8b8")
   const [usdtTokenAddress, setUsdtTokenAddress] = useState("0xdAC17F958D2ee523a2206206994597C13D831ec7")
   const [oracleAddress, setOracleAddress] = useState("0x5f4eC3Df9cbd43714FE2740f5E3616155c5b8419")
+
+  // Theme initialization and persistence
+  useEffect(() => {
+    const savedTheme = localStorage.getItem("theme") || "dark"
+    setTheme(savedTheme)
+    document.documentElement.classList.toggle("dark", savedTheme === "dark")
+  }, [])
+
+  // Theme change handler
+  const handleThemeChange = (newTheme: string) => {
+    setTheme(newTheme)
+    localStorage.setItem("theme", newTheme)
+    document.documentElement.classList.toggle("dark", newTheme === "dark")
+    toast({
+      title: "Tema actualizado",
+      description: `Se ha cambiado al tema ${newTheme === "dark" ? "oscuro" : "claro"}.`,
+    })
+  }
 
   const handleSaveContracts = () => {
     // In a real app, this would save to localStorage or backend
@@ -90,14 +108,20 @@ export default function SettingsPage() {
                 <p className="text-sm text-muted-foreground">Personaliza la apariencia de la aplicación</p>
               </div>
               <div className="w-48">
-                <Select value={theme} onValueChange={setTheme}>
+                <Select value={theme} onValueChange={handleThemeChange}>
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
+                    <SelectItem value="light">
+                      <div className="flex items-center gap-2">
+                        <Sun className="h-4 w-4" />
+                        Claro
+                      </div>
+                    </SelectItem>
                     <SelectItem value="dark">
                       <div className="flex items-center gap-2">
-                        <Palette className="h-4 w-4" />
+                        <Moon className="h-4 w-4" />
                         Oscuro
                       </div>
                     </SelectItem>

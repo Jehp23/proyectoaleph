@@ -1,396 +1,140 @@
 "use client"
 
-import { useAccount, useReadContract, useWriteContract, useWaitForTransactionReceipt } from 'wagmi'
-import { parseUnits, formatUnits } from 'viem'
-import { CONTRACTS, VAULT_MANAGER_ABI, ERC20_ABI } from '@/lib/contracts'
-import { useToast } from '@/hooks/use-toast'
-import { useState } from 'react'
+import { useState, useEffect } from "react"
+import { useToast } from "@/hooks/use-toast"
+import {
+  mockWallet,
+  mockBalances,
+  mockVault,
+  mockProtocol,
+  type MockVaultData,
+  type MockProtocolData,
+  formatUnits,
+  parseUnits,
+} from "@/lib/mock-blockchain"
 
-export interface VaultData {
-  collateralAmount: bigint
-  debtAmount: bigint
-  accruedInterest: bigint
-  ltv: number
-  healthFactor: number
-  liquidationPrice: number
-  isActive: boolean
-}
-
-export interface ProtocolData {
-  totalCollateral: bigint
-  totalDebt: bigint
-  vaultCount: number
-  wbtcPrice: number
-}
+export interface VaultData extends MockVaultData {}
+export interface ProtocolData extends MockProtocolData {}
 
 export function useVault() {
-  const { address } = useAccount()
   const { toast } = useToast()
   const [isLoading, setIsLoading] = useState(false)
-  
-  // Read vault data
-  const { data: vaultData, refetch: refetchVault } = useReadContract({
-    address: CONTRACTS.VAULT_MANAGER,
-    abi: VAULT_MANAGER_ABI,
-    functionName: 'getVaultData',
-    args: address ? [address] : undefined,
-    query: {
-      enabled: !!address,
-      refetchInterval: 10000, // Refetch every 10 seconds
-    }
-  })
+  const [vault, setVault] = useState<VaultData>(mockVault)
+  const [protocol, setProtocol] = useState<ProtocolData>(mockProtocol)
+  const [balances, setBalances] = useState(mockBalances)
 
-  // Read protocol data
-  const { data: protocolData, refetch: refetchProtocol } = useReadContract({
-    address: CONTRACTS.VAULT_MANAGER,
-    abi: VAULT_MANAGER_ABI,
-    functionName: 'getProtocolData',
-    query: {
-      refetchInterval: 15000, // Refetch every 15 seconds
-    }
-  })
+  // Simulate real-time price updates
+  useEffect(() => {
+    const interval = setInterval(() => {
+      const priceChange = (Math.random() - 0.5) * 1000 // ±$500 variation
+      const newPrice = Math.max(30000, protocol.wbtcPrice + priceChange)
 
-  // Read WBTC balance and allowance
-  const { data: wbtcBalance } = useReadContract({
-    address: CONTRACTS.WBTC,
-    abi: ERC20_ABI,
-    functionName: 'balanceOf',
-    args: address ? [address] : undefined,
-    query: {
-      enabled: !!address,
-    }
-  })
+      // Recalculate health factor based on new price
+      const collateralValue = Number(formatUnits(vault.collateralAmount, 8)) * newPrice
+      const debtValue = Number(formatUnits(vault.debtAmount + vault.accruedInterest, 18))
+      const newHealthFactor = (collateralValue * 0.75) / debtValue // 75% liquidation threshold
 
-  const { data: wbtcAllowance, refetch: refetchWbtcAllowance } = useReadContract({
-    address: CONTRACTS.WBTC,
-    abi: ERC20_ABI,
-    functionName: 'allowance',
-    args: address ? [address, CONTRACTS.VAULT_MANAGER] : undefined,
-    query: {
-      enabled: !!address,
-    }
-  })
+      setProtocol((prev) => ({ ...prev, wbtcPrice: newPrice }))
+      setVault((prev) => ({
+        ...prev,
+        healthFactor: newHealthFactor,
+        liquidationPrice: debtValue / (Number(formatUnits(prev.collateralAmount, 8)) * 0.75),
+      }))
+    }, 5000) // Update every 5 seconds
 
-  // Read mUSD balance and allowance
-  const { data: musdBalance } = useReadContract({
-    address: CONTRACTS.MUSD,
-    abi: ERC20_ABI,
-    functionName: 'balanceOf',
-    args: address ? [address] : undefined,
-    query: {
-      enabled: !!address,
-    }
-  })
+    return () => clearInterval(interval)
+  }, [vault.collateralAmount, vault.debtAmount, vault.accruedInterest, protocol.wbtcPrice])
 
-  const { data: musdAllowance, refetch: refetchMusdAllowance } = useReadContract({
-    address: CONTRACTS.MUSD,
-    abi: ERC20_ABI,
-    functionName: 'allowance',
-    args: address ? [address, CONTRACTS.VAULT_MANAGER] : undefined,
-    query: {
-      enabled: !!address,
-    }
-  })
+  const simulateTransaction = async (action: string, amount?: string) => {
+    setIsLoading(true)
 
-  // Write contracts
-  const { writeContract, data: hash } = useWriteContract()
-  const { isLoading: isConfirming } = useWaitForTransactionReceipt({
-    hash,
-  })
+    // Simulate network delay
+    await new Promise((resolve) => setTimeout(resolve, 2000))
 
-  // Helper to format vault data
-  const formatVaultData = (data: any): VaultData | null => {
-    if (!data) return null
-    
-    return {
-      collateralAmount: data[0],
-      debtAmount: data[1],
-      accruedInterest: data[2],
-      ltv: Number(data[3]),
-      healthFactor: Number(data[4]) / 100, // Convert from basis points
-      liquidationPrice: Number(formatUnits(data[5], 8)),
-      isActive: data[6]
-    }
+    toast({
+      title: "Transacción simulada",
+      description: `${action} ${amount ? `de ${amount}` : ""} completado exitosamente`,
+    })
+
+    setIsLoading(false)
   }
 
-  // Helper to format protocol data
-  const formatProtocolData = (data: any): ProtocolData | null => {
-    if (!data) return null
-    
-    return {
-      totalCollateral: data[0],
-      totalDebt: data[1],
-      vaultCount: Number(data[2]),
-      wbtcPrice: Number(formatUnits(data[3], 8))
-    }
-  }
-
-  // Approve WBTC spending
-  const approveWbtc = async (amount: bigint) => {
-    try {
-      setIsLoading(true)
-      writeContract({
-        address: CONTRACTS.WBTC,
-        abi: ERC20_ABI,
-        functionName: 'approve',
-        args: [CONTRACTS.VAULT_MANAGER, amount],
-      })
-      
-      toast({
-        title: "Aprobación enviada",
-        description: "Confirma la transacción en tu wallet",
-      })
-    } catch (error) {
-      console.error('Error approving WBTC:', error)
-      toast({
-        title: "Error",
-        description: "No se pudo aprobar el gasto de WBTC",
-        variant: "destructive",
-      })
-    } finally {
-      setIsLoading(false)
-    }
-  }
-
-  // Approve mUSD spending
-  const approveMusd = async (amount: bigint) => {
-    try {
-      setIsLoading(true)
-      writeContract({
-        address: CONTRACTS.MUSD,
-        abi: ERC20_ABI,
-        functionName: 'approve',
-        args: [CONTRACTS.VAULT_MANAGER, amount],
-      })
-      
-      toast({
-        title: "Aprobación enviada",
-        description: "Confirma la transacción en tu wallet",
-      })
-    } catch (error) {
-      console.error('Error approving mUSD:', error)
-      toast({
-        title: "Error",
-        description: "No se pudo aprobar el gasto de mUSD",
-        variant: "destructive",
-      })
-    } finally {
-      setIsLoading(false)
-    }
-  }
-
-  // Deposit collateral
   const depositCollateral = async (amount: string) => {
-    try {
-      setIsLoading(true)
-      const amountWei = parseUnits(amount, 8) // WBTC has 8 decimals
-      
-      // Check allowance
-      if (!wbtcAllowance || wbtcAllowance < amountWei) {
-        await approveWbtc(amountWei)
-        return
-      }
-      
-      writeContract({
-        address: CONTRACTS.VAULT_MANAGER,
-        abi: VAULT_MANAGER_ABI,
-        functionName: 'depositCollateral',
-        args: [amountWei],
-      })
-      
-      toast({
-        title: "Depósito enviado",
-        description: `Depositando ${amount} WBTC como colateral`,
-      })
-    } catch (error) {
-      console.error('Error depositing collateral:', error)
-      toast({
-        title: "Error",
-        description: "No se pudo depositar el colateral",
-        variant: "destructive",
-      })
-    } finally {
-      setIsLoading(false)
-    }
+    const amountWei = parseUnits(amount, 8)
+    setVault((prev) => ({
+      ...prev,
+      collateralAmount: prev.collateralAmount + amountWei,
+    }))
+    await simulateTransaction("Depósito de colateral", `${amount} WBTC`)
   }
 
-  // Withdraw collateral
-  const withdrawCollateral = async (amount: string) => {
-    try {
-      setIsLoading(true)
-      const amountWei = parseUnits(amount, 8)
-      
-      writeContract({
-        address: CONTRACTS.VAULT_MANAGER,
-        abi: VAULT_MANAGER_ABI,
-        functionName: 'withdrawCollateral',
-        args: [amountWei],
-      })
-      
-      toast({
-        title: "Retiro enviado",
-        description: `Retirando ${amount} WBTC de colateral`,
-      })
-    } catch (error) {
-      console.error('Error withdrawing collateral:', error)
-      toast({
-        title: "Error",
-        description: "No se pudo retirar el colateral",
-        variant: "destructive",
-      })
-    } finally {
-      setIsLoading(false)
-    }
-  }
-
-  // Borrow mUSD
   const borrow = async (amount: string) => {
-    try {
-      setIsLoading(true)
-      const amountWei = parseUnits(amount, 18) // mUSD has 18 decimals
-      
-      writeContract({
-        address: CONTRACTS.VAULT_MANAGER,
-        abi: VAULT_MANAGER_ABI,
-        functionName: 'borrow',
-        args: [amountWei],
-      })
-      
-      toast({
-        title: "Préstamo enviado",
-        description: `Solicitando ${amount} mUSD`,
-      })
-    } catch (error) {
-      console.error('Error borrowing:', error)
-      toast({
-        title: "Error",
-        description: "No se pudo solicitar el préstamo",
-        variant: "destructive",
-      })
-    } finally {
-      setIsLoading(false)
-    }
+    const amountWei = parseUnits(amount, 18)
+    setVault((prev) => ({
+      ...prev,
+      debtAmount: prev.debtAmount + amountWei,
+      ltv: Math.min(60, prev.ltv + 10),
+    }))
+    await simulateTransaction("Préstamo", `${amount} mUSD`)
   }
 
-  // Repay debt
+  const withdrawCollateral = async (amount: string) => {
+    const amountWei = parseUnits(amount, 8)
+    setVault((prev) => ({
+      ...prev,
+      collateralAmount: prev.collateralAmount - amountWei,
+    }))
+    await simulateTransaction("Retiro de colateral", `${amount} WBTC`)
+  }
+
   const repay = async (amount: string) => {
-    try {
-      setIsLoading(true)
-      const amountWei = parseUnits(amount, 18)
-      
-      // Check allowance
-      if (!musdAllowance || musdAllowance < amountWei) {
-        await approveMusd(amountWei)
-        return
-      }
-      
-      writeContract({
-        address: CONTRACTS.VAULT_MANAGER,
-        abi: VAULT_MANAGER_ABI,
-        functionName: 'repay',
-        args: [amountWei],
-      })
-      
-      toast({
-        title: "Pago enviado",
-        description: `Pagando ${amount} mUSD de deuda`,
-      })
-    } catch (error) {
-      console.error('Error repaying:', error)
-      toast({
-        title: "Error",
-        description: "No se pudo pagar la deuda",
-        variant: "destructive",
-      })
-    } finally {
-      setIsLoading(false)
-    }
+    const amountWei = parseUnits(amount, 18)
+    setVault((prev) => ({
+      ...prev,
+      debtAmount: prev.debtAmount - amountWei,
+      ltv: Math.max(0, prev.ltv - 10),
+    }))
+    await simulateTransaction("Pago de deuda", `${amount} mUSD`)
   }
 
-  // Close vault
-  const closeVault = async () => {
-    try {
-      setIsLoading(true)
-      
-      writeContract({
-        address: CONTRACTS.VAULT_MANAGER,
-        abi: VAULT_MANAGER_ABI,
-        functionName: 'closeVault',
-        args: [],
-      })
-      
-      toast({
-        title: "Cierre de vault enviado",
-        description: "Cerrando vault y recuperando colateral",
-      })
-    } catch (error) {
-      console.error('Error closing vault:', error)
-      toast({
-        title: "Error",
-        description: "No se pudo cerrar el vault",
-        variant: "destructive",
-      })
-    } finally {
-      setIsLoading(false)
-    }
-  }
-
-  // Liquidate vault
   const liquidate = async (userAddress: string, repayAmount: string) => {
-    try {
-      setIsLoading(true)
-      const amountWei = parseUnits(repayAmount, 18)
-      
-      // Check allowance
-      if (!musdAllowance || musdAllowance < amountWei) {
-        await approveMusd(amountWei)
-        return
-      }
-      
-      writeContract({
-        address: CONTRACTS.VAULT_MANAGER,
-        abi: VAULT_MANAGER_ABI,
-        functionName: 'liquidate',
-        args: [userAddress as `0x${string}`, amountWei],
-      })
-      
-      toast({
-        title: "Liquidación enviada",
-        description: `Liquidando vault con ${repayAmount} mUSD`,
-      })
-    } catch (error) {
-      console.error('Error liquidating:', error)
-      toast({
-        title: "Error",
-        description: "No se pudo liquidar el vault",
-        variant: "destructive",
-      })
-    } finally {
-      setIsLoading(false)
-    }
+    await simulateTransaction("Liquidación", `${repayAmount} mUSD`)
   }
 
-  // Refresh all data
+  const closeVault = async () => {
+    setVault((prev) => ({ ...prev, isActive: false }))
+    await simulateTransaction("Cierre de vault")
+  }
+
+  const approveWbtc = async (amount: bigint) => {
+    await simulateTransaction("Aprobación WBTC")
+  }
+
+  const approveMusd = async (amount: bigint) => {
+    await simulateTransaction("Aprobación mUSD")
+  }
+
   const refreshData = () => {
-    refetchVault()
-    refetchProtocol()
-    refetchWbtcAllowance()
-    refetchMusdAllowance()
+    // Simulate data refresh
+    toast({
+      title: "Datos actualizados",
+      description: "Información sincronizada con la blockchain",
+    })
   }
 
   return {
     // Data
-    vault: formatVaultData(vaultData),
-    protocol: formatProtocolData(protocolData),
+    vault,
+    protocol,
     balances: {
-      wbtc: wbtcBalance || 0n,
-      musd: musdBalance || 0n,
+      wbtc: balances.wbtc,
+      musd: balances.musd,
     },
     allowances: {
-      wbtc: wbtcAllowance || 0n,
-      musd: musdAllowance || 0n,
+      wbtc: BigInt("1000000000000000000000"), // High allowance for demo
+      musd: BigInt("1000000000000000000000"),
     },
-    
+
     // Actions
     depositCollateral,
     withdrawCollateral,
@@ -401,9 +145,9 @@ export function useVault() {
     approveWbtc,
     approveMusd,
     refreshData,
-    
+
     // States
-    isLoading: isLoading || isConfirming,
-    isConnected: !!address,
+    isLoading,
+    isConnected: mockWallet.isConnected,
   }
 }

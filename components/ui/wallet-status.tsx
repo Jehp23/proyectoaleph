@@ -1,17 +1,15 @@
 "use client"
 
-import { useAccount } from 'wagmi'
-import { useVault } from '@/hooks/useVault'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
-import { Button } from '@/components/ui/button'
-import { Money } from '@/components/ui/money'
-import { Wallet, AlertCircle, CheckCircle } from 'lucide-react'
-import { formatUnits } from 'viem'
+import { useVault } from "@/hooks/useVault"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Badge } from "@/components/ui/badge"
+import { Wallet, AlertCircle, CheckCircle } from "lucide-react"
+import { formatUnits, mockWallet } from "@/lib/mock-blockchain"
 
 export function WalletStatus() {
-  const { address, isConnected } = useAccount()
   const { vault, balances, isLoading } = useVault()
+  const isConnected = mockWallet.isConnected
+  const address = mockWallet.address
 
   if (!isConnected) {
     return (
@@ -38,9 +36,7 @@ export function WalletStatus() {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <code className="text-xs bg-muted px-2 py-1 rounded">
-            {address}
-          </code>
+          <code className="text-xs bg-muted px-2 py-1 rounded">{address}</code>
         </CardContent>
       </Card>
 
@@ -52,15 +48,11 @@ export function WalletStatus() {
         <CardContent className="space-y-2">
           <div className="flex justify-between items-center">
             <span className="text-sm text-muted-foreground">WBTC:</span>
-            <span className="font-mono text-sm">
-              {formatUnits(balances.wbtc, 8)} WBTC
-            </span>
+            <span className="font-mono text-sm">{formatUnits(balances.wbtc, 8)} WBTC</span>
           </div>
           <div className="flex justify-between items-center">
             <span className="text-sm text-muted-foreground">mUSD:</span>
-            <span className="font-mono text-sm">
-              {formatUnits(balances.musd, 18)} mUSD
-            </span>
+            <span className="font-mono text-sm">{formatUnits(balances.musd, 18)} mUSD</span>
           </div>
         </CardContent>
       </Card>
@@ -78,15 +70,11 @@ export function WalletStatus() {
             <div className="grid grid-cols-2 gap-4 text-sm">
               <div>
                 <span className="text-muted-foreground">Colateral:</span>
-                <div className="font-mono">
-                  {formatUnits(vault.collateralAmount, 8)} WBTC
-                </div>
+                <div className="font-mono">{formatUnits(vault.collateralAmount, 8)} WBTC</div>
               </div>
               <div>
                 <span className="text-muted-foreground">Deuda:</span>
-                <div className="font-mono">
-                  {formatUnits(vault.debtAmount + vault.accruedInterest, 18)} mUSD
-                </div>
+                <div className="font-mono">{formatUnits(vault.debtAmount + vault.accruedInterest, 18)} mUSD</div>
               </div>
               <div>
                 <span className="text-muted-foreground">LTV:</span>
@@ -94,20 +82,24 @@ export function WalletStatus() {
               </div>
               <div>
                 <span className="text-muted-foreground">Health Factor:</span>
-                <div className={`font-semibold ${
-                  vault.healthFactor >= 1.5 ? 'text-green-500' : 
-                  vault.healthFactor >= 1.1 ? 'text-yellow-500' : 'text-red-500'
-                }`}>
+                <div
+                  className={`font-semibold ${
+                    vault.healthFactor >= 1.5
+                      ? "text-green-500"
+                      : vault.healthFactor >= 1.1
+                        ? "text-yellow-500"
+                        : "text-red-500"
+                  }`}
+                >
                   {vault.healthFactor.toFixed(2)}
                 </div>
               </div>
             </div>
-            <Badge variant={
-              vault.healthFactor >= 1.5 ? 'default' : 
-              vault.healthFactor >= 1.1 ? 'secondary' : 'destructive'
-            } className="w-full justify-center">
-              {vault.healthFactor >= 1.5 ? 'Saludable' : 
-               vault.healthFactor >= 1.1 ? 'Precaución' : 'Crítico'}
+            <Badge
+              variant={vault.healthFactor >= 1.5 ? "default" : vault.healthFactor >= 1.1 ? "secondary" : "destructive"}
+              className="w-full justify-center"
+            >
+              {vault.healthFactor >= 1.5 ? "Saludable" : vault.healthFactor >= 1.1 ? "Precaución" : "Crítico"}
             </Badge>
           </CardContent>
         </Card>
@@ -115,18 +107,12 @@ export function WalletStatus() {
         <Card className="border-dashed">
           <CardContent className="flex flex-col items-center justify-center py-6">
             <AlertCircle className="h-8 w-8 text-muted-foreground mb-2" />
-            <p className="text-sm text-center text-muted-foreground">
-              No tienes un vault activo
-            </p>
+            <p className="text-sm text-center text-muted-foreground">No tienes un vault activo</p>
           </CardContent>
         </Card>
       )}
 
-      {isLoading && (
-        <div className="text-center text-sm text-muted-foreground">
-          Actualizando datos...
-        </div>
-      )}
+      {isLoading && <div className="text-center text-sm text-muted-foreground">Actualizando datos...</div>}
     </div>
   )
 }

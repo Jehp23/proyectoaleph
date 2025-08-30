@@ -3,17 +3,17 @@
 ## **Configuración Inicial**
 
 ### 1. **Instalar Dependencias**
-```bash
+\`\`\`bash
 npm install
-```
+\`\`\`
 
 ### 2. **Configurar Variables de Entorno**
 Copia `env.example` a `.env` y configura:
 
-```env
+\`\`\`env
 # Blockchain Configuration
-NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID=tu_walletconnect_project_id
-NEXT_PUBLIC_SEPOLIA_RPC_URL=https://sepolia.infura.io/v3/TU_INFURA_KEY
+NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID=your_walletconnect_project_id
+NEXT_PUBLIC_SEPOLIA_RPC_URL=https://sepolia.infura.io/v3/YOUR_INFURA_PROJECT_ID
 
 # Contract Addresses (se completarán después del deploy)
 NEXT_PUBLIC_WBTC_ADDRESS=
@@ -22,27 +22,27 @@ NEXT_PUBLIC_ORACLE_ADDRESS=
 NEXT_PUBLIC_VAULT_MANAGER_ADDRESS=
 
 # Hardhat Configuration
-PRIVATE_KEY=tu_private_key_para_deployment
-ETHERSCAN_API_KEY=tu_etherscan_api_key
-SEPOLIA_RPC_URL=https://sepolia.infura.io/v3/TU_INFURA_KEY
-```
+PRIVATE_KEY=your_private_key_for_deployment
+ETHERSCAN_API_KEY=your_etherscan_api_key
+SEPOLIA_RPC_URL=https://sepolia.infura.io/v3/YOUR_INFURA_PROJECT_ID
+\`\`\`
 
 ## **Deployment en Sepolia**
 
 ### 3. **Compilar Contratos**
-```bash
+\`\`\`bash
 npm run compile
-```
+\`\`\`
 
 ### 4. **Ejecutar Tests**
-```bash
+\`\`\`bash
 npm run test
-```
+\`\`\`
 
 ### 5. **Deploy en Sepolia**
-```bash
+\`\`\`bash
 npm run deploy:sepolia
-```
+\`\`\`
 
 Este comando:
 - Deploya MockERC20 (WBTC y mUSD)
@@ -54,18 +54,18 @@ Este comando:
 ### 6. **Actualizar Variables de Entorno**
 Después del deploy, actualiza `.env` con las addresses de los contratos:
 
-```bash
+\`\`\`bash
 # Ejemplo de output del deploy
 NEXT_PUBLIC_WBTC_ADDRESS=0x1234...
 NEXT_PUBLIC_MUSD_ADDRESS=0x5678...
 NEXT_PUBLIC_ORACLE_ADDRESS=0x9abc...
 NEXT_PUBLIC_VAULT_MANAGER_ADDRESS=0xdef0...
-```
+\`\`\`
 
 ### 7. **Seed con Datos de Demo**
-```bash
+\`\`\`bash
 npm run seed:sepolia
-```
+\`\`\`
 
 Esto crea:
 - 2 vaults de demo con diferentes niveles de riesgo
@@ -75,9 +75,9 @@ Esto crea:
 ## **Desarrollo Local**
 
 ### 8. **Iniciar Aplicación**
-```bash
+\`\`\`bash
 npm run dev
-```
+\`\`\`
 
 La aplicación estará disponible en `http://localhost:3000`
 
@@ -86,10 +86,10 @@ La aplicación estará disponible en `http://localhost:3000`
 ### 9. **Preparación de Demo (5 min)**
 
 1. **Verificar Deployment**
-   ```bash
+   \`\`\`bash
    # Verificar que los contratos estén deployados
    cat deployments/sepolia.json
-   ```
+   \`\`\`
 
 2. **Configurar Wallets de Demo**
    - Wallet Principal: Para crear vaults
@@ -134,64 +134,64 @@ La aplicación estará disponible en `http://localhost:3000`
 ## **Comandos Útiles**
 
 ### Desarrollo
-```bash
+\`\`\`bash
 npm run dev          # Iniciar desarrollo
 npm run build        # Build para producción
 npm run lint         # Linter
-```
+\`\`\`
 
 ### Blockchain
-```bash
+\`\`\`bash
 npm run compile      # Compilar contratos
 npm run test         # Ejecutar tests
 npm run deploy:sepolia    # Deploy en Sepolia
 npm run seed:sepolia      # Seed datos demo
 npm run simulate-drop     # Simular caída precio
-```
+\`\`\`
 
 ### Simulación de Precios
-```bash
+\`\`\`bash
 # Simular caída específica
 npx hardhat run scripts/simulate-drop.js --network sepolia 15
 # (15 = 15% de caída)
-```
+\`\`\`
 
 ## **Troubleshooting**
 
 ### Problemas Comunes
 
 **1. Error de RPC**
-```
+\`\`\`
 Error: could not detect network
-```
+\`\`\`
 **Solución:** Verificar SEPOLIA_RPC_URL en `.env`
 
 **2. Error de Gas**
-```
+\`\`\`
 Error: insufficient funds for intrinsic transaction cost
-```
+\`\`\`
 **Solución:** Obtener ETH de Sepolia faucet
 
 **3. Error de Allowance**
-```
+\`\`\`
 Error: ERC20: insufficient allowance
-```
+\`\`\`
 **Solución:** La UI maneja esto automáticamente, verificar conexión de wallet
 
 **4. Contratos no encontrados**
-```
+\`\`\`
 Error: call revert exception
-```
+\`\`\`
 **Solución:** Verificar addresses en `.env` y que los contratos estén deployados
 
 ### Reset Completo
-```bash
+\`\`\`bash
 # Limpiar y re-deployar todo
 rm -rf deployments/
 npm run deploy:sepolia
 npm run seed:sepolia
 # Actualizar .env con nuevas addresses
-```
+\`\`\`
 
 ## **Verificación Final**
 

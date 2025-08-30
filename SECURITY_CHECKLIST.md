@@ -19,14 +19,14 @@
 - **Interés Simple** - Cálculo por tiempo transcurrido, no compuesto
 
 ### 🔍 **Validaciones Críticas**
-```solidity
+\`\`\`solidity
 // Ejemplos de validaciones implementadas
 require(amount > 0, "Amount must be greater than 0");
 require(vault.isActive, "Vault not active");
 require(healthFactor >= 120, "Health factor too low"); // 1.2 minimum
 require(ltv <= LTV_MAX, "LTV exceeds maximum");
 require(healthFactor < 100, "Vault is healthy"); // Para liquidación
-```
+\`\`\`
 
 ## **Frontend Security**
 
@@ -38,24 +38,24 @@ require(healthFactor < 100, "Vault is healthy"); // Para liquidación
 - [x] **Loading States** - Prevención de doble-click en transacciones
 
 ### 📋 **Validaciones Frontend**
-```typescript
+\`\`\`typescript
 // Validaciones implementadas en hooks
 - Verificación de balance antes de transacciones
 - Validación de allowance antes de transfers
 - Cálculo de health factor en tiempo real
 - Prevención de LTV > 60%
 - Bloqueo de retiros si HF < 1.2
-```
+\`\`\`
 
 ## **Parámetros del Protocolo**
 
 ### 🎯 **Configuración Actual**
-```solidity
+\`\`\`solidity
 LTV_MAX = 60%                 // Máximo préstamo/colateral
 LIQUIDATION_THRESHOLD = 70%   // Umbral de liquidación
 LIQUIDATION_BONUS = 10%       // Bonificación para liquidadores
 APR_BPS = 1200               // 12% tasa anual
-```
+\`\`\`
 
 ### ⚖️ **Justificación de Parámetros**
 - **LTV 60%** - Buffer de 10% antes de liquidación
@@ -83,21 +83,21 @@ APR_BPS = 1200               // 12% tasa anual
 ## **Mitigaciones Implementadas**
 
 ### 🛡️ **Contratos**
-```solidity
+\`\`\`solidity
 // Ejemplo de protecciones implementadas
 modifier nonReentrant() { ... }  // Anti-reentrancia
 using SafeERC20 for IERC20;      // Transferencias seguras
 require(healthFactor >= 120, ...); // Buffer de seguridad
-```
+\`\`\`
 
 ### 🔐 **Frontend**
-```typescript
+\`\`\`typescript
 // Validaciones antes de transacciones
 if (!wbtcAllowance || wbtcAllowance < amountWei) {
   await approveWbtc(amountWei)
   return
 }
-```
+\`\`\`
 
 ## **Recomendaciones para Producción**
 

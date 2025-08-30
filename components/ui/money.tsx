@@ -1,4 +1,5 @@
 import { cn } from "@/lib/utils"
+import { formatCurrency, PRECISION_CONSTANTS } from "@/lib/precision-math"
 
 interface MoneyProps {
   amount: bigint | number
@@ -9,46 +10,37 @@ interface MoneyProps {
 }
 
 export function Money({ amount, currency, className, showCurrency = true, precision }: MoneyProps) {
-  const value = typeof amount === "bigint" ? Number(amount) : amount
+  // Convert number to BigInt if needed (for backward compatibility)
+  let bigIntAmount: bigint
 
-  let formatted: string
-  let symbol: string
+  if (typeof amount === "number") {
+    // Convert number to BigInt based on currency
+    let decimals: number
+    switch (currency) {
+      case "BTC":
+        decimals = PRECISION_CONSTANTS.BTC_DECIMALS
+        break
+      case "USDT":
+        decimals = PRECISION_CONSTANTS.USDT_DECIMALS
+        break
+      case "USD":
+        decimals = PRECISION_CONSTANTS.PRICE_DECIMALS
+        break
+    }
 
-  switch (currency) {
-    case "BTC":
-      // Convert satoshis to BTC
-      const btcValue = value / 100000000
-      formatted = btcValue.toLocaleString("es-ES", {
-        minimumFractionDigits: precision ?? (btcValue < 0.01 ? 6 : 4),
-        maximumFractionDigits: precision ?? (btcValue < 0.01 ? 6 : 4),
-      })
-      symbol = "BTC"
-      break
-    case "USDT":
-      // Convert wei to USDT
-      const usdtValue = value / 1000000
-      formatted = usdtValue.toLocaleString("es-ES", {
-        minimumFractionDigits: precision ?? 0,
-        maximumFractionDigits: precision ?? 2,
-      })
-      symbol = "USDT"
-      break
-    case "USD":
-      formatted = value.toLocaleString("es-ES", {
-        minimumFractionDigits: precision ?? 0,
-        maximumFractionDigits: precision ?? 2,
-      })
-      symbol = "USD"
-      break
-    default:
-      formatted = value.toString()
-      symbol = ""
+    // Convert with exact precision
+    bigIntAmount = BigInt(Math.round(amount * Number(BigInt(10) ** BigInt(decimals))))
+  } else {
+    bigIntAmount = amount
   }
 
-  return (
-    <span className={cn("font-mono", className)}>
-      {formatted}
-      {showCurrency && symbol && ` ${symbol}`}
-    </span>
-  )
+  // Format with exact precision
+  const formatted = formatCurrency(bigIntAmount, currency, precision)
+
+  if (!showCurrency) {
+    // Remove currency symbol for display
+    return <span className={cn("font-mono", className)}>{formatted.replace(/ (BTC|USDT|USD)$/, "")}</span>
+  }
+
+  return <span className={cn("font-mono", className)}>{formatted}</span>
 }

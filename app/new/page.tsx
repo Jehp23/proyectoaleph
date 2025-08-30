@@ -14,6 +14,13 @@ import { useStore } from "@/lib/store"
 import { ArrowLeft, ArrowRight, HelpCircle, Shield, Bitcoin } from "lucide-react"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { useRouter } from "next/navigation"
+import {
+  stringToBigInt,
+  calculateHealthFactor,
+  calculateLiquidationPrice,
+  PRECISION_CONSTANTS,
+  safeToNumber,
+} from "@/lib/precision-math"
 
 export default function NewVaultPage() {
   const { createVault, btcPrice } = useStore()
@@ -27,20 +34,42 @@ export default function NewVaultPage() {
   const [interestRate] = useState(8.5) // Fixed 8.5% annual interest rate
   const [liquidationThreshold] = useState(75) // Fixed 75% liquidation threshold
 
-  // Calculations
-  const btcCollateralSatoshis = btcAmount ? Math.floor(Number.parseFloat(btcAmount) * 100000000) : 0 // Convert BTC to satoshis
-  const collateralValueUsd = btcCollateralSatoshis ? (btcCollateralSatoshis / 100000000) * btcPrice : 0
-  const maxBorrowUsd = (collateralValueUsd * liquidationThreshold) / 100
-  const borrowAmountUsd = (collateralValueUsd * ltv) / 100
-  const borrowAmountUsdt = Math.floor(borrowAmountUsd * 1000000) // Convert to USDT wei
+  // High-precision calculations
+  const btcCollateralSatoshis = btcAmount ? stringToBigInt(btcAmount, PRECISION_CONSTANTS.BTC_DECIMALS) : BigInt(0)
+  const btcPriceBigInt = BigInt(Math.round(btcPrice * Number(PRECISION_CONSTANTS.PRICE_MULTIPLIER)))
+  const liquidationThresholdBP = BigInt(liquidationThreshold * 100) // Convert to basis points
+
+  // Calculate collateral value in USD (exact precision)
+  const collateralValueUsd =
+    btcCollateralSatoshis > 0
+      ? (btcCollateralSatoshis * btcPriceBigInt) / PRECISION_CONSTANTS.BTC_SATOSHI_MULTIPLIER
+      : BigInt(0)
+
+  // Calculate borrow amount based on LTV
+  const borrowAmountUsd = collateralValueUsd > 0 ? (collateralValueUsd * BigInt(ltv)) / BigInt(100) : BigInt(0)
+
+  // Convert to USDT wei (6 decimals)
+  const borrowAmountUsdt =
+    borrowAmountUsd * BigInt(10) ** BigInt(PRECISION_CONSTANTS.PRICE_DECIMALS - PRECISION_CONSTANTS.USDT_DECIMALS)
+
+  // Calculate liquidation price with exact precision
   const liquidationPrice =
-    borrowAmountUsd > 0 ? (borrowAmountUsd / (btcCollateralSatoshis / 100000000)) * (100 / liquidationThreshold) : 0
+    btcCollateralSatoshis > 0 && borrowAmountUsdt > 0
+      ? calculateLiquidationPrice(btcCollateralSatoshis, borrowAmountUsdt, liquidationThresholdBP)
+      : BigInt(0)
 
-  // Health factor calculation
-  const healthFactor = borrowAmountUsd > 0 ? (collateralValueUsd * liquidationThreshold) / 100 / borrowAmountUsd : 999
+  // Health factor calculation with exact precision
+  const healthFactor =
+    btcCollateralSatoshis > 0 && borrowAmountUsdt > 0
+      ? calculateHealthFactor(btcCollateralSatoshis, borrowAmountUsdt, btcPriceBigInt, liquidationThresholdBP)
+      : BigInt(999) * PRECISION_CONSTANTS.HEALTH_FACTOR_MULTIPLIER
 
-  const canProceedStep1 = btcAmount && Number.parseFloat(btcAmount) > 0
-  const canProceedStep2 = borrowAmountUsd > 0 && healthFactor > 1
+  // Safe conversions for display only
+  const healthFactorDisplay = safeToNumber(healthFactor, PRECISION_CONSTANTS.HEALTH_FACTOR_DECIMALS)
+  const liquidationPriceDisplay = safeToNumber(liquidationPrice, PRECISION_CONSTANTS.PRICE_DECIMALS)
+
+  const canProceedStep1 = btcAmount && btcCollateralSatoshis > 0
+  const canProceedStep2 = borrowAmountUsdt > 0 && healthFactor > PRECISION_CONSTANTS.HEALTH_FACTOR_MULTIPLIER
   const canCreate = canProceedStep1 && canProceedStep2
 
   const handleCreateVault = async () => {
@@ -51,8 +80,8 @@ export default function NewVaultPage() {
 
     createVault({
       owner: "0xYour...Address", // Placeholder
-      btcCollateral: BigInt(btcCollateralSatoshis),
-      usdtBorrowed: BigInt(borrowAmountUsdt),
+      btcCollateral: btcCollateralSatoshis,
+      usdtBorrowed: borrowAmountUsdt,
       ltv,
       liquidationThreshold,
       status: "Active",
@@ -76,16 +105,15 @@ export default function NewVaultPage() {
           <Bitcoin className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-orange-500" />
           <Input
             id="btc-amount"
-            type="number"
-            placeholder="1.0"
+            type="text"
+            placeholder="1.00000000"
             value={btcAmount}
             onChange={(e) => setBtcAmount(e.target.value)}
-            className="pl-10"
-            step="0.0001"
-            min="0"
+            className="pl-10 font-mono"
+            pattern="^\d+(\.\d{0,8})?$"
           />
         </div>
-        {btcAmount && (
+        {btcAmount && collateralValueUsd > 0 && (
           <p className="text-sm text-muted-foreground">
             ≈ <Money amount={collateralValueUsd} currency="USD" />
           </p>
@@ -109,7 +137,7 @@ export default function NewVaultPage() {
               <div>
                 <span className="text-muted-foreground">Precio BTC:</span>
                 <div className="font-medium font-mono">
-                  <Money amount={btcPrice} currency="USD" />
+                  <Money amount={btcPriceBigInt} currency="USD" />
                 </div>
               </div>
             </div>
@@ -147,9 +175,9 @@ export default function NewVaultPage() {
             <CardContent className="p-4">
               <div className="text-sm text-muted-foreground mb-1">Factor de salud</div>
               <div
-                className={`text-xl font-bold ${healthFactor >= 1.5 ? "text-green-500" : healthFactor >= 1.1 ? "text-yellow-500" : "text-red-500"}`}
+                className={`text-xl font-bold ${healthFactorDisplay >= 1.5 ? "text-green-500" : healthFactorDisplay >= 1.1 ? "text-yellow-500" : "text-red-500"}`}
               >
-                {healthFactor.toFixed(2)}
+                {healthFactorDisplay.toFixed(2)}
               </div>
             </CardContent>
           </Card>
@@ -184,7 +212,7 @@ export default function NewVaultPage() {
           </div>
         </div>
 
-        {liquidationPrice > 0 && (
+        {liquidationPriceDisplay > 0 && (
           <div className="p-4 bg-yellow-500/10 border border-yellow-500/20 rounded-lg">
             <div className="flex items-start gap-2">
               <HelpCircle className="h-5 w-5 text-yellow-500 mt-0.5" />
@@ -193,7 +221,7 @@ export default function NewVaultPage() {
                 <p className="text-muted-foreground">
                   Tu vault será liquidado si BTC cae por debajo de{" "}
                   <span className="font-medium">
-                    <Money amount={liquidationPrice} currency="USD" />
+                    <Money amount={liquidationPriceDisplay} currency="USD" />
                   </span>
                 </p>
               </div>
@@ -223,7 +251,7 @@ export default function NewVaultPage() {
             <div>
               <div className="text-sm text-muted-foreground">Colateral BTC</div>
               <div className="text-lg font-semibold">
-                <Money amount={BigInt(btcCollateralSatoshis)} currency="BTC" />
+                <Money amount={btcCollateralSatoshis} currency="BTC" />
               </div>
             </div>
             <div>
@@ -240,15 +268,15 @@ export default function NewVaultPage() {
             <div>
               <div className="text-sm text-muted-foreground">Cantidad prestada</div>
               <div className="text-xl font-bold">
-                <Money amount={BigInt(borrowAmountUsdt)} currency="USDT" />
+                <Money amount={borrowAmountUsdt} currency="USDT" />
               </div>
             </div>
             <div>
               <div className="text-sm text-muted-foreground">Factor de salud</div>
               <div
-                className={`text-xl font-bold ${healthFactor >= 1.5 ? "text-green-500" : healthFactor >= 1.1 ? "text-yellow-500" : "text-red-500"}`}
+                className={`text-xl font-bold ${healthFactorDisplay >= 1.5 ? "text-green-500" : healthFactorDisplay >= 1.1 ? "text-yellow-500" : "text-red-500"}`}
               >
-                {healthFactor.toFixed(2)}
+                {healthFactorDisplay.toFixed(2)}
               </div>
             </div>
           </div>
@@ -271,7 +299,7 @@ export default function NewVaultPage() {
             <div className="flex justify-between text-sm">
               <span className="text-muted-foreground">Precio de liquidación:</span>
               <span className="font-medium">
-                <Money amount={liquidationPrice} currency="USD" />
+                <Money amount={liquidationPriceDisplay} currency="USD" />
               </span>
             </div>
           </div>

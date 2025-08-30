@@ -1,30 +1,40 @@
 "use client"
 
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { WagmiProvider } from 'wagmi'
-import { RainbowKitProvider, getDefaultConfig } from '@rainbow-me/rainbowkit'
-import { sepolia, hardhat } from 'wagmi/chains'
-import { useState } from 'react'
+import { createContext, useContext, useState, type ReactNode } from "react"
 
-import '@rainbow-me/rainbowkit/styles.css'
+// Mock wallet context to replace RainbowKit functionality
+interface WalletContextType {
+  address: string | null
+  isConnected: boolean
+  connect: () => void
+  disconnect: () => void
+}
 
-const config = getDefaultConfig({
-  appName: 'CauciónBTC',
-  projectId: process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID || 'caucionbtc-demo',
-  chains: [sepolia, hardhat],
-  ssr: true,
-})
+const WalletContext = createContext<WalletContextType | null>(null)
 
-export function Providers({ children }: { children: React.ReactNode }) {
-  const [queryClient] = useState(() => new QueryClient())
+export function useAccount() {
+  const context = useContext(WalletContext)
+  if (!context) {
+    throw new Error("useAccount must be used within Providers")
+  }
+  return context
+}
+
+export function Providers({ children }: { children: ReactNode }) {
+  const [address, setAddress] = useState<string | null>(null)
+  const [isConnected, setIsConnected] = useState(false)
+
+  const connect = () => {
+    setAddress("0x742d35Cc6634C0532925a3b8D4C9db96590c6C87")
+    setIsConnected(true)
+  }
+
+  const disconnect = () => {
+    setAddress(null)
+    setIsConnected(false)
+  }
 
   return (
-    <WagmiProvider config={config}>
-      <QueryClientProvider client={queryClient}>
-        <RainbowKitProvider>
-          {children}
-        </RainbowKitProvider>
-      </QueryClientProvider>
-    </WagmiProvider>
+    <WalletContext.Provider value={{ address, isConnected, connect, disconnect }}>{children}</WalletContext.Provider>
   )
 }

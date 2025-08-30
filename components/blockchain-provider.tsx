@@ -1,9 +1,10 @@
 "use client"
 
-import { useEffect } from 'react'
-import { useVault } from '@/hooks/useVault'
-import { useStore } from '@/lib/store'
-import { formatUnits } from 'viem'
+import type React from "react"
+
+import { useEffect } from "react"
+import { useVault } from "@/hooks/useVault"
+import { useStore } from "@/lib/store"
 
 /**
  * Component to sync blockchain data with Zustand store
@@ -26,16 +27,20 @@ export function BlockchainProvider({ children }: { children: React.ReactNode }) 
       // Convert blockchain vault data to store format if needed
       // This maintains compatibility with existing UI components
       const mockVault = {
-        id: 'user-vault',
-        owner: 'Connected User',
+        id: "user-vault",
+        owner: "Connected User",
         btcCollateral: vault.collateralAmount,
         usdtBorrowed: vault.debtAmount + vault.accruedInterest,
         ltv: vault.ltv,
         liquidationThreshold: 75,
         healthFactor: vault.healthFactor,
-        healthLevel: vault.healthFactor >= 1.5 ? 'Healthy' as const : 
-                    vault.healthFactor >= 1.1 ? 'Warning' as const : 'Critical' as const,
-        status: 'Active' as const,
+        healthLevel:
+          vault.healthFactor >= 1.5
+            ? ("Healthy" as const)
+            : vault.healthFactor >= 1.1
+              ? ("Warning" as const)
+              : ("Critical" as const),
+        status: "Active" as const,
         createdAt: new Date(),
         btcPrice: protocol?.wbtcPrice || 45000,
         interestRate: 12,
@@ -44,7 +49,7 @@ export function BlockchainProvider({ children }: { children: React.ReactNode }) 
       }
 
       // Only add if not already exists
-      const existingVault = vaults.find(v => v.id === 'user-vault')
+      const existingVault = vaults.find((v) => v.id === "user-vault")
       if (!existingVault) {
         createMockVault(mockVault)
       }
