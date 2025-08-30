@@ -84,6 +84,17 @@ export default function NewVaultPage() {
       btcPriceBigInt,
       liquidationThresholdBP,
     )
+
+    console.log("[v0] Health Factor Debug:", {
+      btcCollateralSatoshis: btcCollateralSatoshis.toString(),
+      borrowAmountUsdt: borrowAmountUsdt.toString(),
+      btcPriceBigInt: btcPriceBigInt.toString(),
+      liquidationThresholdBP: liquidationThresholdBP.toString(),
+      healthFactorRaw: result.toString(),
+      healthFactorMultiplier: PRECISION_CONSTANTS.HEALTH_FACTOR_MULTIPLIER.toString(),
+      healthFactorDecimals: PRECISION_CONSTANTS.HEALTH_FACTOR_DECIMALS,
+    })
+
     return result
   })()
 
@@ -97,13 +108,21 @@ export default function NewVaultPage() {
     }
 
     const displayValue = safeToNumber(healthFactor, PRECISION_CONSTANTS.HEALTH_FACTOR_DECIMALS)
+
+    console.log("[v0] Health Factor Display Debug:", {
+      healthFactorRaw: healthFactor.toString(),
+      displayValue,
+      multiplier: PRECISION_CONSTANTS.HEALTH_FACTOR_MULTIPLIER.toString(),
+      decimals: PRECISION_CONSTANTS.HEALTH_FACTOR_DECIMALS,
+    })
+
     return displayValue
   })()
 
   const liquidationPriceDisplay = safeToNumber(liquidationPrice, PRECISION_CONSTANTS.PRICE_DECIMALS)
 
   const canProceedStep1 = btcAmount && btcCollateralSatoshis > 0
-  const canProceedStep2 = borrowAmountUsdt > 0 && healthFactor > PRECISION_CONSTANTS.HEALTH_FACTOR_MULTIPLIER
+  const canProceedStep2 = borrowAmountUsdt > 0 && healthFactor > BigInt(1000) // Use explicit threshold instead of multiplier constant
   const canCreate = canProceedStep1 && canProceedStep2
 
   const handleCreateVault = async () => {
