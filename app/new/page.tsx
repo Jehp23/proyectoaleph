@@ -70,13 +70,27 @@ export default function NewVaultPage() {
       : BigInt(0)
 
   // Health factor calculation with exact precision
-  const healthFactor =
-    btcCollateralSatoshis > 0 && borrowAmountUsdt > 0
-      ? calculateHealthFactor(btcCollateralSatoshis, borrowAmountUsdt, btcPriceBigInt, liquidationThresholdBP)
-      : BigInt(999) * PRECISION_CONSTANTS.HEALTH_FACTOR_MULTIPLIER
+  const healthFactor = (() => {
+    if (btcCollateralSatoshis <= 0) {
+      return BigInt(0) // No collateral = no health factor
+    }
+    if (borrowAmountUsdt <= 0) {
+      return BigInt(999) * PRECISION_CONSTANTS.HEALTH_FACTOR_MULTIPLIER // No debt = infinite health factor
+    }
+    return calculateHealthFactor(btcCollateralSatoshis, borrowAmountUsdt, btcPriceBigInt, liquidationThresholdBP)
+  })()
 
   // Safe conversions for display only
-  const healthFactorDisplay = safeToNumber(healthFactor, PRECISION_CONSTANTS.HEALTH_FACTOR_DECIMALS)
+  const healthFactorDisplay = (() => {
+    if (btcCollateralSatoshis <= 0) {
+      return 0
+    }
+    if (borrowAmountUsdt <= 0) {
+      return 999 // Display as very high number when no debt
+    }
+    return safeToNumber(healthFactor, PRECISION_CONSTANTS.HEALTH_FACTOR_DECIMALS)
+  })()
+
   const liquidationPriceDisplay = safeToNumber(liquidationPrice, PRECISION_CONSTANTS.PRICE_DECIMALS)
 
   const canProceedStep1 = btcAmount && btcCollateralSatoshis > 0
@@ -193,7 +207,7 @@ export default function NewVaultPage() {
               <div
                 className={`text-xl font-bold ${healthFactorDisplay >= 1.5 ? "text-green-500" : healthFactorDisplay >= 1.1 ? "text-yellow-500" : "text-red-500"}`}
               >
-                {healthFactorDisplay.toFixed(2)}
+                {healthFactorDisplay >= 999 ? "∞" : healthFactorDisplay.toFixed(2)}
               </div>
             </CardContent>
           </Card>
@@ -292,7 +306,7 @@ export default function NewVaultPage() {
               <div
                 className={`text-xl font-bold ${healthFactorDisplay >= 1.5 ? "text-green-500" : healthFactorDisplay >= 1.1 ? "text-yellow-500" : "text-red-500"}`}
               >
-                {healthFactorDisplay.toFixed(2)}
+                {healthFactorDisplay >= 999 ? "∞" : healthFactorDisplay.toFixed(2)}
               </div>
             </div>
           </div>
