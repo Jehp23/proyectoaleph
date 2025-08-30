@@ -2,6 +2,7 @@
 
 import Link from "next/link"
 import { useState, useEffect } from "react"
+import { Home, PlusCircle, Search, Wallet, TrendingUp, Menu, X, Sun, Moon, Zap, User, Settings } from "lucide-react"
 
 export default function HomePage() {
   const [btcPrice, setBtcPrice] = useState(45000)
@@ -57,7 +58,7 @@ export default function HomePage() {
               onClick={() => setSidebarOpen(false)}
               className="lg:hidden p-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700"
             >
-              ✕
+              <X className="h-4 w-4 text-gray-600 dark:text-gray-400" />
             </button>
           </div>
           <nav className="p-4 space-y-2">
@@ -65,31 +66,43 @@ export default function HomePage() {
               href="/"
               className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 border-l-4 border-blue-600"
             >
-              🏠 Inicio
+              <Home className="h-4 w-4" />
+              Inicio
             </Link>
             <Link
               href="/new"
               className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300"
             >
-              ➕ Crear Vault
+              <PlusCircle className="h-4 w-4" />
+              Crear Vault
             </Link>
             <Link
               href="/vaults"
               className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300"
             >
-              🔍 Explorar Vaults
+              <Search className="h-4 w-4" />
+              Explorar Vaults
             </Link>
             <Link
               href="/me"
               className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300"
             >
-              👤 Mis Vaults
+              <Wallet className="h-4 w-4" />
+              Mis Vaults
             </Link>
             <Link
               href="/liquidations"
               className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300"
             >
-              📈 Liquidaciones
+              <TrendingUp className="h-4 w-4" />
+              Liquidaciones
+            </Link>
+            <Link
+              href="/settings"
+              className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300"
+            >
+              <Settings className="h-4 w-4" />
+              Ajustes
             </Link>
           </nav>
         </div>
@@ -103,7 +116,7 @@ export default function HomePage() {
                 onClick={() => setSidebarOpen(true)}
                 className="lg:hidden mr-2 p-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700"
               >
-                ☰
+                <Menu className="h-4 w-4 text-gray-600 dark:text-gray-400" />
               </button>
               <div className="flex flex-1 items-center justify-end space-x-2">
                 <button
@@ -111,7 +124,7 @@ export default function HomePage() {
                   className="flex items-center gap-2 px-3 py-2 rounded-md border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
                   title={isDark ? "Cambiar a modo claro" : "Cambiar a modo oscuro"}
                 >
-                  <span className="text-lg">{isDark ? "☀️" : "🌙"}</span>
+                  {isDark ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
                   <span className="text-sm text-gray-700 dark:text-gray-300">{isDark ? "Claro" : "Oscuro"}</span>
                 </button>
                 <button className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-300">
@@ -126,7 +139,8 @@ export default function HomePage() {
             {/* Execution Mode Selector */}
             <div className="mb-8 p-6 border-2 border-blue-200 dark:border-blue-800 rounded-lg bg-white dark:bg-gray-800">
               <h3 className="text-lg font-semibold mb-4 text-gray-900 dark:text-white flex items-center gap-2">
-                ⚡ Modo de Ejecución
+                <Zap className="h-5 w-5" />
+                Modo de Ejecución
               </h3>
               <div className="flex flex-col sm:flex-row gap-4">
                 <button
@@ -138,7 +152,8 @@ export default function HomePage() {
                   }`}
                 >
                   <div className="flex items-center gap-2 mb-2">
-                    <span className="font-semibold text-gray-900 dark:text-white">👤 Modo Manual</span>
+                    <User className="h-4 w-4" />
+                    <span className="font-semibold text-gray-900 dark:text-white">Modo Manual</span>
                     <span className="px-2 py-1 bg-gray-100 dark:bg-gray-700 rounded text-xs text-gray-600 dark:text-gray-400">
                       Gratis
                     </span>
@@ -156,7 +171,8 @@ export default function HomePage() {
                   }`}
                 >
                   <div className="flex items-center gap-2 mb-2">
-                    <span className="font-semibold text-gray-900 dark:text-white">⚡ Modo Asistido</span>
+                    <Zap className="h-4 w-4" />
+                    <span className="font-semibold text-gray-900 dark:text-white">Modo Asistido</span>
                     <span className="px-2 py-1 border border-gray-300 dark:border-gray-600 rounded text-xs text-gray-600 dark:text-gray-400">
                       0.5% fee
                     </span>
@@ -192,7 +208,7 @@ export default function HomePage() {
                 <div className="p-6 bg-white dark:bg-gray-800 rounded-lg border-2 border-gray-200 dark:border-gray-700 hover:border-blue-500 dark:hover:border-blue-500 transition-all cursor-pointer group">
                   <div className="text-center">
                     <div className="mx-auto h-12 w-12 rounded-full bg-blue-100 dark:bg-blue-900 flex items-center justify-center mb-4">
-                      <span className="text-2xl">➕</span>
+                      <PlusCircle className="h-6 w-6 text-blue-600 dark:text-blue-400" />
                     </div>
                     <h3 className="text-xl font-semibold mb-2 text-gray-900 dark:text-white">Crear vault</h3>
                     <p className="text-gray-600 dark:text-gray-400 mb-3">
@@ -215,7 +231,7 @@ export default function HomePage() {
                 <div className="p-6 bg-white dark:bg-gray-800 rounded-lg border-2 border-gray-200 dark:border-gray-700 hover:border-green-500 transition-all cursor-pointer">
                   <div className="text-center">
                     <div className="mx-auto h-12 w-12 rounded-full bg-green-100 dark:bg-green-900 flex items-center justify-center mb-4">
-                      <span className="text-2xl">👤</span>
+                      <Wallet className="h-6 w-6 text-green-600 dark:text-green-400" />
                     </div>
                     <h3 className="text-xl font-semibold mb-2 text-gray-900 dark:text-white">Gestionar vaults</h3>
                     <p className="text-gray-600 dark:text-gray-400">
@@ -229,7 +245,7 @@ export default function HomePage() {
                 <div className="p-6 bg-white dark:bg-gray-800 rounded-lg border-2 border-gray-200 dark:border-gray-700 hover:border-yellow-500 transition-all cursor-pointer">
                   <div className="text-center">
                     <div className="mx-auto h-12 w-12 rounded-full bg-yellow-100 dark:bg-yellow-900 flex items-center justify-center mb-4">
-                      <span className="text-2xl">🔍</span>
+                      <Search className="h-6 w-6 text-yellow-600 dark:text-yellow-400" />
                     </div>
                     <h3 className="text-xl font-semibold mb-2 text-gray-900 dark:text-white">Explorar vaults</h3>
                     <p className="text-gray-600 dark:text-gray-400">
@@ -274,27 +290,31 @@ export default function HomePage() {
               <div className="flex flex-wrap gap-3">
                 <Link
                   href="/new"
-                  className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+                  className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
                 >
-                  ➕ Crear vault
+                  <PlusCircle className="h-4 w-4" />
+                  Crear vault
                 </Link>
                 <Link
                   href="/vaults"
-                  className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 transition-colors"
+                  className="flex items-center gap-2 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 transition-colors"
                 >
-                  🔍 Explorar vaults
+                  <Search className="h-4 w-4" />
+                  Explorar vaults
                 </Link>
                 <Link
                   href="/me"
-                  className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 transition-colors"
+                  className="flex items-center gap-2 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 transition-colors"
                 >
-                  👤 Mis vaults
+                  <Wallet className="h-4 w-4" />
+                  Mis vaults
                 </Link>
                 <Link
                   href="/liquidations"
-                  className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 transition-colors"
+                  className="flex items-center gap-2 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 transition-colors"
                 >
-                  📈 Ver liquidaciones
+                  <TrendingUp className="h-4 w-4" />
+                  Ver liquidaciones
                 </Link>
               </div>
             </div>
