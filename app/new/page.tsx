@@ -12,50 +12,47 @@ import { LtvSlider } from "@/components/ui/ltv-slider"
 import ActionButton from "@/components/ui/ActionButton"
 import { canBorrow } from "@/lib/validation"
 import { useAccount } from "wagmi"
-import { useStore } from "@/lib/store"
+import { useProtocol } from "@/hooks/useProtocol"
+import { useProtocolWrites } from "@/hooks/useWrites"
 import { ArrowLeft, ArrowRight, HelpCircle, Shield, Bitcoin } from "lucide-react"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { useRouter } from "next/navigation"
-import { btcToWei, musdToWei, weiToBtc, weiToMusd, formatBtc, formatMusd, formatUsd } from "@/lib/units"
+import { toWbtc, fmtBTC, fmtUSD } from "@/lib/units"
 import { calcLtv, calcHf, calcLiqPrice, resolveLt, resolveLtvMax, simpleInterest, hfBadge } from "@/lib/math"
-import { useProtocol } from "@/hooks/useProtocol"
 import { LTV_DEFAULT } from "@/lib/risk-params"
 
 export default function NewVaultPage() {
-  const { createVault, btcPrice } = useStore()
   const { data: proto, loading: loadingProto } = useProtocol()
+  const { approveWbtc, depositCollateral, borrow, state } = useProtocolWrites()
   const { address, isConnected } = useAccount()
   const router = useRouter()
   const [currentStep, setCurrentStep] = useState(1)
   const [showTxModal, setShowTxModal] = useState(false)
+  const [txStep, setTxStep] = useState<"approve" | "deposit" | "borrow">("approve")
 
   const [btcAmount, setBtcAmount] = useState("")
   const [ltv, setLtv] = useState(LTV_DEFAULT) // Default 50% LTV
 
   const lt = resolveLt(proto?.liqThresholdBps) // 0..1
   const ltvMax = resolveLtvMax(proto?.ltvMaxBps) // 0..1
-  const priceUsd = proto?.priceUsd ?? btcPrice
+  const priceUsd = proto?.priceUsd ?? 0
   const aprBps = proto?.aprBps ?? 1200
   const liqBonusBps = proto?.liqBonusBps ?? 1000
 
-  const safeParseBtcAmount = (amount: string): bigint => {
+  const safeParseBtcAmount = (amount: string): number => {
     if (!amount || amount.trim() === "" || !/^\d+(\.\d+)?$/.test(amount.trim())) {
-      return BigInt(0)
+      return 0
     }
     try {
-      return btcToWei(Number.parseFloat(amount.trim()))
+      return Number.parseFloat(amount.trim())
     } catch {
-      return BigInt(0)
+      return 0
     }
   }
 
-  const btcCollateralWei = safeParseBtcAmount(btcAmount)
-  const btcCollateralHuman = weiToBtc(btcCollateralWei)
-
+  const btcCollateralHuman = safeParseBtcAmount(btcAmount)
   const collateralValueUsd = btcCollateralHuman * priceUsd
   const borrowAmountUsd = collateralValueUsd * (ltv / 100)
-  const borrowAmountMusdWei = musdToWei(borrowAmountUsd)
-  const borrowAmountHuman = weiToMusd(borrowAmountMusdWei)
 
   const ltvValue = calcLtv(borrowAmountUsd, btcCollateralHuman, priceUsd)
   const healthFactorValue = calcHf(borrowAmountUsd, btcCollateralHuman, priceUsd, lt)
@@ -74,27 +71,31 @@ export default function NewVaultPage() {
     connected: isConnected,
   })
 
-  const canProceedStep1 = btcAmount && btcCollateralWei > 0
+  const canProceedStep1 = btcAmount && btcCollateralHuman > 0
   const canProceedStep2 = borrowGuard.ok
   const canCreate = canProceedStep1 && canProceedStep2
 
   const handleCreateVault = async () => {
     if (!canCreate) return
 
-    await new Promise((resolve) => setTimeout(resolve, 1000))
+    try {
+      setTxStep("approve")
+      await approveWbtc(btcCollateralHuman)
 
-    createVault({
-      owner: address, // Use wallet address
-      btcCollateral: btcCollateralWei,
-      usdtBorrowed: borrowAmountMusdWei,
-      ltv,
-      liquidationThreshold: lt * 100, // Convert to percentage for storage
-      status: "Active",
-      btcPrice,
-      interestRate: aprBps / 100, // Convert BPS to percentage
-    })
+      setTxStep("deposit")
+      await depositCollateral(btcCollateralHuman)
 
-    router.push("/me")
+      if (borrowAmountUsd > 0) {
+        setTxStep("borrow")
+        await borrow(borrowAmountUsd)
+      }
+
+      // Success - redirect to vault management
+      router.push("/me")
+    } catch (error) {
+      console.error("Vault creation failed:", error)
+      // Error handling is managed by the state from useProtocolWrites
+    }
   }
 
   const renderStep1 = () => (
@@ -124,7 +125,7 @@ export default function NewVaultPage() {
           />
         </div>
         {btcAmount && collateralValueUsd > 0 && (
-          <p className="text-sm text-muted-foreground">≈ {formatUsd(collateralValueUsd)}</p>
+          <p className="text-sm text-muted-foreground">≈ {fmtUSD(collateralValueUsd)}</p>
         )}
       </div>
 
@@ -138,11 +139,11 @@ export default function NewVaultPage() {
             <div className="grid grid-cols-2 gap-4 text-sm">
               <div>
                 <span className="text-muted-foreground">Valor actual:</span>
-                <div className="font-medium">{formatUsd(collateralValueUsd)}</div>
+                <div className="font-medium">{fmtUSD(collateralValueUsd)}</div>
               </div>
               <div>
                 <span className="text-muted-foreground">Precio BTC:</span>
-                <div className="font-medium font-mono">{formatUsd(priceUsd)}</div>
+                <div className="font-medium font-mono">{fmtUSD(priceUsd)}</div>
               </div>
             </div>
           </CardContent>
@@ -169,7 +170,7 @@ export default function NewVaultPage() {
           <Card>
             <CardContent className="p-4">
               <div className="text-sm text-muted-foreground mb-1">Cantidad a prestar</div>
-              <div className="text-xl font-bold">{formatMusd(borrowAmountHuman)}</div>
+              <div className="text-xl font-bold">{fmtUSD(borrowAmountUsd)} mUSD</div>
             </CardContent>
           </Card>
 
@@ -248,7 +249,7 @@ export default function NewVaultPage() {
               <div className="text-sm">
                 <div className="font-medium text-blue-500 mb-1">Interés estimado (90 días)</div>
                 <p className="text-muted-foreground">
-                  Aproximadamente <span className="font-medium">{formatUsd(estInteres90d)}</span> en intereses
+                  Aproximadamente <span className="font-medium">{fmtUSD(estInteres90d)}</span> en intereses
                 </p>
               </div>
             </div>
@@ -263,7 +264,7 @@ export default function NewVaultPage() {
                 <div className="font-medium text-yellow-500 mb-1">Precio de liquidación</div>
                 <p className="text-muted-foreground">
                   Tu vault será liquidado si BTC cae por debajo de{" "}
-                  <span className="font-medium">{formatUsd(liquidationPriceValue)}</span>
+                  <span className="font-medium">{fmtUSD(liquidationPriceValue)}</span>
                 </p>
               </div>
             </div>
@@ -303,11 +304,11 @@ export default function NewVaultPage() {
           <div className="grid grid-cols-2 gap-4">
             <div>
               <div className="text-sm text-muted-foreground">Colateral BTC</div>
-              <div className="text-lg font-semibold">{formatBtc(btcCollateralHuman)}</div>
+              <div className="text-lg font-semibold">{fmtBTC(toWbtc(btcCollateralHuman))}</div>
             </div>
             <div>
               <div className="text-sm text-muted-foreground">Valor del colateral</div>
-              <div className="text-lg font-semibold text-orange-500">{formatUsd(collateralValueUsd)}</div>
+              <div className="text-lg font-semibold text-orange-500">{fmtUSD(collateralValueUsd)}</div>
             </div>
           </div>
 
@@ -316,7 +317,7 @@ export default function NewVaultPage() {
           <div className="grid grid-cols-2 gap-4">
             <div>
               <div className="text-sm text-muted-foreground">Cantidad prestada</div>
-              <div className="text-xl font-bold">{formatMusd(borrowAmountHuman)}</div>
+              <div className="text-xl font-bold">{fmtUSD(borrowAmountUsd)} mUSD</div>
             </div>
             <div>
               <div className="text-sm text-muted-foreground">Factor de salud</div>
@@ -348,25 +349,42 @@ export default function NewVaultPage() {
             <div className="flex justify-between text-sm">
               <span className="text-muted-foreground">Precio de liquidación:</span>
               <span className="font-medium">
-                {liquidationPriceValue === Number.POSITIVE_INFINITY ? "N/A" : formatUsd(liquidationPriceValue)}
+                {liquidationPriceValue === Number.POSITIVE_INFINITY ? "N/A" : fmtUSD(liquidationPriceValue)}
               </span>
             </div>
           </div>
         </CardContent>
       </Card>
 
-      <div className="p-4 bg-blue-500/10 border border-blue-500/20 rounded-lg">
-        <div className="flex items-start gap-2">
-          <HelpCircle className="h-5 w-5 text-blue-500 mt-0.5" />
-          <div className="text-sm">
-            <div className="font-medium text-blue-500 mb-1">Importante</div>
-            <p className="text-muted-foreground">
-              Al crear este vault, deberás aprobar el depósito de BTC y firmar la transacción. El colateral será
-              bloqueado hasta que pagues completamente la deuda o cierres el vault.
-            </p>
+      {state.pending || state.mining ? (
+        <div className="p-4 bg-blue-500/10 border border-blue-500/20 rounded-lg">
+          <div className="flex items-start gap-2">
+            <div className="animate-spin h-5 w-5 border-2 border-blue-500 border-t-transparent rounded-full mt-0.5" />
+            <div className="text-sm">
+              <div className="font-medium text-blue-500 mb-1">
+                {txStep === "approve" && "Aprobando WBTC..."}
+                {txStep === "deposit" && "Depositando colateral..."}
+                {txStep === "borrow" && "Solicitando préstamo..."}
+              </div>
+              <p className="text-muted-foreground">
+                {state.pending ? "Confirma la transacción en tu wallet" : "Esperando confirmación en blockchain..."}
+              </p>
+            </div>
           </div>
         </div>
-      </div>
+      ) : null}
+
+      {state.error && (
+        <div className="p-4 bg-red-500/10 border border-red-500/20 rounded-lg">
+          <div className="flex items-start gap-2">
+            <HelpCircle className="h-5 w-5 text-red-500 mt-0.5" />
+            <div className="text-sm">
+              <div className="font-medium text-red-500 mb-1">Error en transacción</div>
+              <p className="text-muted-foreground">{state.error}</p>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 
@@ -436,9 +454,13 @@ export default function NewVaultPage() {
               <ArrowRight className="h-4 w-4" />
             </Button>
           ) : (
-            <ActionButton disabled={!borrowGuard.ok} reason={borrowGuard.reason} onClick={() => setShowTxModal(true)}>
+            <ActionButton
+              disabled={!borrowGuard.ok || state.pending || state.mining}
+              reason={borrowGuard.reason}
+              onClick={() => setShowTxModal(true)}
+            >
               <div className="flex items-center gap-2">
-                Crear vault
+                {state.pending || state.mining ? "Procesando..." : "Crear vault"}
                 <ArrowRight className="h-4 w-4" />
               </div>
             </ActionButton>
