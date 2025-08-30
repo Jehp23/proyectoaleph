@@ -34,8 +34,19 @@ export default function NewVaultPage() {
   const [interestRate] = useState(8.5) // Fixed 8.5% annual interest rate
   const [liquidationThreshold] = useState(75) // Fixed 75% liquidation threshold
 
+  const safeParseBtcAmount = (amount: string): bigint => {
+    if (!amount || amount.trim() === "" || !/^\d+(\.\d+)?$/.test(amount.trim())) {
+      return BigInt(0)
+    }
+    try {
+      return stringToBigInt(amount.trim(), PRECISION_CONSTANTS.BTC_DECIMALS)
+    } catch {
+      return BigInt(0)
+    }
+  }
+
   // High-precision calculations
-  const btcCollateralSatoshis = btcAmount ? stringToBigInt(btcAmount, PRECISION_CONSTANTS.BTC_DECIMALS) : BigInt(0)
+  const btcCollateralSatoshis = safeParseBtcAmount(btcAmount)
   const btcPriceBigInt = BigInt(Math.round(btcPrice * Number(PRECISION_CONSTANTS.PRICE_MULTIPLIER)))
   const liquidationThresholdBP = BigInt(liquidationThreshold * 100) // Convert to basis points
 
@@ -108,7 +119,12 @@ export default function NewVaultPage() {
             type="text"
             placeholder="1.00000000"
             value={btcAmount}
-            onChange={(e) => setBtcAmount(e.target.value)}
+            onChange={(e) => {
+              const value = e.target.value
+              if (value === "" || /^\d*\.?\d{0,8}$/.test(value)) {
+                setBtcAmount(value)
+              }
+            }}
             className="pl-10 font-mono"
             pattern="^\d+(\.\d{0,8})?$"
           />
