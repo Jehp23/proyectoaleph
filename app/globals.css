@@ -1,7 +1,6 @@
 @import "tailwindcss";
 @import "tw-animate-css";
-/* Added RainbowKit styles import to fix CSS loading issue */
-@import "@rainbow-me/rainbowkit/styles.css";
+/* Removed RainbowKit CSS import that was causing MIME type error */
 
 @custom-variant dark (&:is(.dark *));
 
