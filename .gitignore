@@ -1,0 +1,17 @@
+# Frontend
+frontend/node_modules/
+frontend/.next/
+frontend/dist/
+
+# Onchain
+onchain/node_modules/
+onchain/artifacts/
+onchain/cache/
+onchain/coverage/
+
+# Backend
+backend/.venv/
+__pycache__/
+
+# OS
+.DS_Store
