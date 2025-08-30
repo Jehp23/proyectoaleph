@@ -5,6 +5,7 @@ import type React from "react"
 import { useEffect } from "react"
 import { useVault } from "@/hooks/useVault"
 import { useStore } from "@/lib/store"
+import { LIQUIDATION_THRESHOLD_PERCENT, ANNUAL_INTEREST_RATE } from "@/lib/risk-params"
 
 /**
  * Component to sync blockchain data with Zustand store
@@ -32,7 +33,7 @@ export function BlockchainProvider({ children }: { children: React.ReactNode }) 
         btcCollateral: vault.collateralAmount,
         usdtBorrowed: vault.debtAmount + vault.accruedInterest,
         ltv: vault.ltv,
-        liquidationThreshold: 75,
+        liquidationThreshold: LIQUIDATION_THRESHOLD_PERCENT,
         healthFactor: vault.healthFactor,
         healthLevel:
           vault.healthFactor >= 1.5
@@ -43,7 +44,7 @@ export function BlockchainProvider({ children }: { children: React.ReactNode }) 
         status: "Active" as const,
         createdAt: new Date(),
         btcPrice: protocol?.wbtcPrice || 45000,
-        interestRate: 12,
+        interestRate: ANNUAL_INTEREST_RATE,
         lastInterestUpdate: new Date(),
         accruedInterest: vault.accruedInterest,
       }

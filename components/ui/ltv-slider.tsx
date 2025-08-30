@@ -3,6 +3,7 @@
 import { Slider } from "@/components/ui/slider"
 import { Label } from "@/components/ui/label"
 import { cn } from "@/lib/utils"
+import { LTV_COLOR_THRESHOLDS, LTV_MAX_PERCENT } from "@/lib/risk-params"
 
 interface LtvSliderProps {
   value: number
@@ -12,16 +13,18 @@ interface LtvSliderProps {
   disabled?: boolean
 }
 
-export function LtvSlider({ value, onChange, maxLtv = 75, className, disabled }: LtvSliderProps) {
+export function LtvSlider({ value, onChange, maxLtv = LTV_MAX_PERCENT, className, disabled }: LtvSliderProps) {
   const getColorClass = (ltv: number) => {
-    if (ltv <= 50) return "text-green-500"
-    if (ltv <= 65) return "text-yellow-500"
+    if (ltv <= LTV_COLOR_THRESHOLDS.GREEN_MAX) return "text-green-500"
+    if (ltv <= LTV_COLOR_THRESHOLDS.YELLOW_MAX) return "text-yellow-500"
     return "text-red-500"
   }
 
   const getSliderClass = (ltv: number) => {
-    if (ltv <= 50) return "[&_[role=slider]]:border-green-500 [&_[data-orientation=horizontal]]:bg-green-500"
-    if (ltv <= 65) return "[&_[role=slider]]:border-yellow-500 [&_[data-orientation=horizontal]]:bg-yellow-500"
+    if (ltv <= LTV_COLOR_THRESHOLDS.GREEN_MAX)
+      return "[&_[role=slider]]:border-green-500 [&_[data-orientation=horizontal]]:bg-green-500"
+    if (ltv <= LTV_COLOR_THRESHOLDS.YELLOW_MAX)
+      return "[&_[role=slider]]:border-yellow-500 [&_[data-orientation=horizontal]]:bg-yellow-500"
     return "[&_[role=slider]]:border-red-500 [&_[data-orientation=horizontal]]:bg-red-500"
   }
 
@@ -44,11 +47,11 @@ export function LtvSlider({ value, onChange, maxLtv = 75, className, disabled }:
 
       <div className="flex justify-between text-xs text-muted-foreground">
         <span>10% (Conservador)</span>
-        <span>50% (Moderado)</span>
+        <span>{LTV_COLOR_THRESHOLDS.GREEN_MAX}% (Moderado)</span>
         <span>{maxLtv}% (Riesgoso)</span>
       </div>
 
-      {value > 65 && (
+      {value > LTV_COLOR_THRESHOLDS.YELLOW_MAX && (
         <div className="text-xs text-red-500 bg-red-500/10 p-2 rounded border border-red-500/20">
           ⚠️ LTV alto: riesgo de liquidación si el precio de BTC baja
         </div>

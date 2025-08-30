@@ -12,6 +12,7 @@ import {
   formatUnits,
   parseUnits,
 } from "@/lib/mock-blockchain"
+import { LIQUIDATION_THRESHOLD_PERCENT } from "@/lib/risk-params"
 
 export interface VaultData extends MockVaultData {}
 export interface ProtocolData extends MockProtocolData {}
@@ -33,13 +34,14 @@ export function useVault() {
       // Recalculate health factor based on new price
       const collateralValue = Number(formatUnits(vault.collateralAmount, 8)) * newPrice
       const debtValue = Number(formatUnits(vault.debtAmount + vault.accruedInterest, 18))
-      const newHealthFactor = (collateralValue * 0.75) / debtValue // 75% liquidation threshold
+      const newHealthFactor = (collateralValue * (LIQUIDATION_THRESHOLD_PERCENT / 100)) / debtValue
 
       setProtocol((prev) => ({ ...prev, wbtcPrice: newPrice }))
       setVault((prev) => ({
         ...prev,
         healthFactor: newHealthFactor,
-        liquidationPrice: debtValue / (Number(formatUnits(prev.collateralAmount, 8)) * 0.75),
+        liquidationPrice:
+          debtValue / (Number(formatUnits(prev.collateralAmount, 8)) * (LIQUIDATION_THRESHOLD_PERCENT / 100)),
       }))
     }, 5000) // Update every 5 seconds
 

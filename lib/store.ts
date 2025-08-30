@@ -1,6 +1,13 @@
 "use client"
 
 import { create } from "zustand"
+import {
+  LIQUIDATION_THRESHOLD_PERCENT,
+  ANNUAL_INTEREST_RATE,
+  HEALTH_FACTOR_HEALTHY,
+  HEALTH_FACTOR_WARNING,
+  HEALTH_FACTOR_INFINITE,
+} from "@/lib/risk-params"
 
 export type VaultStatus = "Active" | "Liquidated" | "Closed"
 export type HealthLevel = "Healthy" | "Warning" | "Critical"
@@ -47,7 +54,7 @@ const calculateHealthFactor = (
   btcPrice: number,
   liquidationThreshold: number,
 ): number => {
-  if (usdtBorrowed === BigInt(0)) return 999 // No debt = very healthy
+  if (usdtBorrowed === BigInt(0)) return HEALTH_FACTOR_INFINITE // No debt = very healthy
   const collateralValue = (Number(btcCollateral) * btcPrice) / 100000000 // Convert satoshis to BTC
   const borrowedValue = Number(usdtBorrowed) / 1000000 // Convert wei to USDT
   return (collateralValue * liquidationThreshold) / 100 / borrowedValue
@@ -55,8 +62,8 @@ const calculateHealthFactor = (
 
 // Helper function to determine health level
 const getHealthLevel = (healthFactor: number): HealthLevel => {
-  if (healthFactor >= 1.5) return "Healthy"
-  if (healthFactor >= 1.1) return "Warning"
+  if (healthFactor >= HEALTH_FACTOR_HEALTHY) return "Healthy"
+  if (healthFactor >= HEALTH_FACTOR_WARNING) return "Warning"
   return "Critical"
 }
 
@@ -72,13 +79,13 @@ export const useStore = create<StoreState>()((set, get) => ({
       btcCollateral: BigInt(100000000), // 1 BTC
       usdtBorrowed: BigInt(30000000000), // 30,000 USDT
       ltv: 67, // 67% LTV
-      liquidationThreshold: 75,
+      liquidationThreshold: LIQUIDATION_THRESHOLD_PERCENT,
       healthFactor: 1.12,
       healthLevel: "Warning",
       status: "Active",
       createdAt: new Date("2024-01-15"),
       btcPrice: 45000,
-      interestRate: 8.5,
+      interestRate: ANNUAL_INTEREST_RATE,
       lastInterestUpdate: new Date("2024-01-20"),
       accruedInterest: BigInt(125000000), // 125 USDT
     },
@@ -88,13 +95,13 @@ export const useStore = create<StoreState>()((set, get) => ({
       btcCollateral: BigInt(200000000), // 2 BTC
       usdtBorrowed: BigInt(50000000000), // 50,000 USDT
       ltv: 56, // 56% LTV
-      liquidationThreshold: 75,
+      liquidationThreshold: LIQUIDATION_THRESHOLD_PERCENT,
       healthFactor: 1.35,
       healthLevel: "Healthy",
       status: "Active",
       createdAt: new Date("2024-01-10"),
       btcPrice: 44500,
-      interestRate: 8.5,
+      interestRate: ANNUAL_INTEREST_RATE,
       lastInterestUpdate: new Date("2024-01-18"),
       accruedInterest: BigInt(200000000), // 200 USDT
     },
@@ -104,14 +111,14 @@ export const useStore = create<StoreState>()((set, get) => ({
       btcCollateral: BigInt(50000000), // 0.5 BTC
       usdtBorrowed: BigInt(20000000000), // 20,000 USDT
       ltv: 89, // 89% LTV - very risky
-      liquidationThreshold: 75,
+      liquidationThreshold: LIQUIDATION_THRESHOLD_PERCENT,
       healthFactor: 0.84,
       healthLevel: "Critical",
       status: "Liquidated",
       createdAt: new Date("2024-01-05"),
       liquidatedAt: new Date("2024-01-22"),
       btcPrice: 44000,
-      interestRate: 8.5,
+      interestRate: ANNUAL_INTEREST_RATE,
       lastInterestUpdate: new Date("2024-01-22"),
       accruedInterest: BigInt(150000000), // 150 USDT
     },

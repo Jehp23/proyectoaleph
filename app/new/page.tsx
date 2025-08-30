@@ -21,6 +21,15 @@ import {
   PRECISION_CONSTANTS,
   safeToNumber,
 } from "@/lib/precision-math"
+import {
+  LIQUIDATION_THRESHOLD_PERCENT,
+  ANNUAL_INTEREST_RATE,
+  HEALTH_FACTOR_MIN,
+  HEALTH_FACTOR_HEALTHY,
+  HEALTH_FACTOR_WARNING,
+  HEALTH_FACTOR_INFINITE,
+  LTV_DEFAULT,
+} from "@/lib/risk-params"
 
 export default function NewVaultPage() {
   const { createVault, btcPrice } = useStore()
@@ -30,9 +39,9 @@ export default function NewVaultPage() {
 
   // Form state
   const [btcAmount, setBtcAmount] = useState("")
-  const [ltv, setLtv] = useState(50) // Default 50% LTV
-  const [interestRate] = useState(8.5) // Fixed 8.5% annual interest rate
-  const [liquidationThreshold] = useState(75) // Fixed 75% liquidation threshold
+  const [ltv, setLtv] = useState(LTV_DEFAULT) // Default 50% LTV
+  const [interestRate] = useState(ANNUAL_INTEREST_RATE) // Fixed 8.5% annual interest rate
+  const [liquidationThreshold] = useState(LIQUIDATION_THRESHOLD_PERCENT) // Fixed 70% liquidation threshold
 
   const safeParseBtcAmount = (amount: string): bigint => {
     if (!amount || amount.trim() === "" || !/^\d+(\.\d+)?$/.test(amount.trim())) {
@@ -74,7 +83,7 @@ export default function NewVaultPage() {
       return BigInt(0) // No collateral = no health factor
     }
     if (borrowAmountUsdt <= 0) {
-      return BigInt(999) * PRECISION_CONSTANTS.HEALTH_FACTOR_MULTIPLIER // No debt = infinite health factor
+      return BigInt(HEALTH_FACTOR_INFINITE) * PRECISION_CONSTANTS.HEALTH_FACTOR_MULTIPLIER // No debt = infinite health factor
     }
 
     return calculateHealthFactor(btcCollateralSatoshis, borrowAmountUsdt, btcPriceBigInt, liquidationThresholdBP)
@@ -86,7 +95,7 @@ export default function NewVaultPage() {
       return 0 // No collateral
     }
     if (borrowAmountUsdt <= 0) {
-      return 999 // Display as very high number when no debt
+      return HEALTH_FACTOR_INFINITE // Display as very high number when no debt
     }
 
     return safeToNumber(healthFactor, PRECISION_CONSTANTS.HEALTH_FACTOR_DECIMALS)
@@ -95,7 +104,7 @@ export default function NewVaultPage() {
   const liquidationPriceDisplay = safeToNumber(liquidationPrice, PRECISION_CONSTANTS.PRICE_DECIMALS)
 
   const canProceedStep1 = btcAmount && btcCollateralSatoshis > 0
-  const canProceedStep2 = borrowAmountUsdt > 0 && healthFactor > BigInt(1000) // Use explicit threshold instead of multiplier constant
+  const canProceedStep2 = borrowAmountUsdt > 0 && healthFactor > BigInt(HEALTH_FACTOR_MIN * 1000) // Use explicit threshold
   const canCreate = canProceedStep1 && canProceedStep2
 
   const handleCreateVault = async () => {
@@ -206,9 +215,9 @@ export default function NewVaultPage() {
             <CardContent className="p-4">
               <div className="text-sm text-muted-foreground mb-1">Factor de salud</div>
               <div
-                className={`text-xl font-bold ${healthFactorDisplay >= 1.5 ? "text-green-500" : healthFactorDisplay >= 1.1 ? "text-yellow-500" : "text-red-500"}`}
+                className={`text-xl font-bold ${healthFactorDisplay >= HEALTH_FACTOR_HEALTHY ? "text-green-500" : healthFactorDisplay >= HEALTH_FACTOR_WARNING ? "text-yellow-500" : "text-red-500"}`}
               >
-                {healthFactorDisplay >= 999 ? "∞" : healthFactorDisplay.toFixed(2)}
+                {healthFactorDisplay >= HEALTH_FACTOR_INFINITE ? "∞" : healthFactorDisplay.toFixed(2)}
               </div>
             </CardContent>
           </Card>
@@ -305,9 +314,9 @@ export default function NewVaultPage() {
             <div>
               <div className="text-sm text-muted-foreground">Factor de salud</div>
               <div
-                className={`text-xl font-bold ${healthFactorDisplay >= 1.5 ? "text-green-500" : healthFactorDisplay >= 1.1 ? "text-yellow-500" : "text-red-500"}`}
+                className={`text-xl font-bold ${healthFactorDisplay >= HEALTH_FACTOR_HEALTHY ? "text-green-500" : healthFactorDisplay >= HEALTH_FACTOR_WARNING ? "text-yellow-500" : "text-red-500"}`}
               >
-                {healthFactorDisplay >= 999 ? "∞" : healthFactorDisplay.toFixed(2)}
+                {healthFactorDisplay >= HEALTH_FACTOR_INFINITE ? "∞" : healthFactorDisplay.toFixed(2)}
               </div>
             </div>
           </div>
