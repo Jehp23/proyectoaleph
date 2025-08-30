@@ -7,7 +7,7 @@ import { Toaster } from "@/components/ui/sonner"
 import "./globals.css"
 
 export const metadata: Metadata = {
-  title: "CauciónBTC (Sepolia)",
+  title: "CautioLink (Sepolia)",
   description: "Caución cripto no-custodial: depositá BTC, tomá USDT",
   generator: "v0.app",
 }

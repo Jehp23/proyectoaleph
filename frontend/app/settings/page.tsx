@@ -251,15 +251,15 @@ export default function SettingsPage() {
               </div>
               <div>
                 <span className="text-muted-foreground">Última actualización:</span>
-                <div className="font-medium">Enero 2024</div>
+                <div className="font-medium">Agosto 2025</div>
               </div>
             </div>
 
             <Separator />
 
             <div className="text-center space-y-2">
-              <p className="text-sm text-muted-foreground">CauciónBTC - Caución cripto no-custodial</p>
-              <p className="text-xs text-muted-foreground">Construido con Next.js, Tailwind CSS y shadcn/ui</p>
+              <p className="text-sm text-muted-foreground">CautioLink - Caución cripto no-custodial</p>
+              <p className="text-xs text-muted-foreground">Construido con Next.js, Tailwind CSS y shadcn/ui | Hecho en V0</p>
             </div>
           </CardContent>
         </Card>

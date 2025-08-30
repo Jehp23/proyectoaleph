@@ -66,7 +66,7 @@ export function Sidebar() {
         </Sheet>
 
         {/* Bottom Tab Bar */}
-        <div className="fixed bottom-0 left-0 right-0 z-40 bg-card border-t md:hidden">
+        <div className="fixed bottom-0 left-0 right-0 z-40 bg-background border-t md:hidden">
           <div className="flex items-center justify-around py-2">
             {navigation.slice(0, 5).map((item) => {
               return (
