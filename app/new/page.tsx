@@ -9,32 +9,26 @@ import { Label } from "@/components/ui/label"
 import { Separator } from "@/components/ui/separator"
 import { TxModal } from "@/components/ui/tx-modal"
 import { LtvSlider } from "@/components/ui/ltv-slider"
+import ActionButton from "@/components/ui/ActionButton"
+import { canBorrow } from "@/lib/validation"
+import { useAccount } from "@/lib/mock-wallet"
 import { useStore } from "@/lib/store"
 import { ArrowLeft, ArrowRight, HelpCircle, Shield, Bitcoin } from "lucide-react"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { useRouter } from "next/navigation"
 import { btcToWei, musdToWei, weiToBtc, weiToMusd, formatBtc, formatMusd, formatUsd } from "@/lib/units"
-import {
-  calcLtv,
-  calcHf,
-  calcLiqPrice,
-  resolveLt,
-  resolveLtvMax,
-  simpleInterest,
-  hfBadge,
-  HF_WITHDRAW_MIN,
-} from "@/lib/math"
+import { calcLtv, calcHf, calcLiqPrice, resolveLt, resolveLtvMax, simpleInterest, hfBadge } from "@/lib/math"
 import { useProtocol } from "@/hooks/useProtocol"
 import { LIQUIDATION_THRESHOLD_PERCENT, ANNUAL_INTEREST_RATE, LTV_DEFAULT } from "@/lib/risk-params"
 
 export default function NewVaultPage() {
   const { createVault, btcPrice } = useStore()
-  const { data: proto } = useProtocol()
+  const { data: proto, loading: loadingProto } = useProtocol()
+  const { address, isConnected } = useAccount()
   const router = useRouter()
   const [currentStep, setCurrentStep] = useState(1)
   const [showTxModal, setShowTxModal] = useState(false)
 
-  // Form state
   const [btcAmount, setBtcAmount] = useState("")
   const [ltv, setLtv] = useState(LTV_DEFAULT) // Default 50% LTV
   const [interestRate] = useState(ANNUAL_INTEREST_RATE) // Fixed 8.5% annual interest rate
@@ -69,19 +63,28 @@ export default function NewVaultPage() {
   const estInteres90d = simpleInterest(borrowAmountUsd, proto?.aprBps ?? 1200, 90)
   const badge = hfBadge(healthFactorValue)
 
+  const borrowGuard = canBorrow({
+    priceUsd,
+    collateralBtc: btcCollateralHuman,
+    debtUsd: 0, // No existing debt for new vault
+    extraDebtUsd: borrowAmountUsd,
+    ltvMaxBps: proto?.ltvMaxBps,
+    liqThresholdBps: proto?.liqThresholdBps,
+    loading: loadingProto,
+    connected: isConnected,
+  })
+
   const canProceedStep1 = btcAmount && btcCollateralWei > 0
-  const canBorrow = ltvValue <= ltvMax && priceUsd > 0
-  const canProceedStep2 = borrowAmountHuman > 0 && healthFactorValue > HF_WITHDRAW_MIN && canBorrow
+  const canProceedStep2 = borrowGuard.ok
   const canCreate = canProceedStep1 && canProceedStep2
 
   const handleCreateVault = async () => {
     if (!canCreate) return
 
-    // Simulate transaction delay
     await new Promise((resolve) => setTimeout(resolve, 1000))
 
     createVault({
-      owner: "0xYour...Address", // Placeholder
+      owner: address, // Use wallet address
       btcCollateral: btcCollateralWei,
       usdtBorrowed: borrowAmountMusdWei,
       ltv,
@@ -239,16 +242,13 @@ export default function NewVaultPage() {
           </div>
         )}
 
-        {!canBorrow && ltvValue > ltvMax && (
+        {!borrowGuard.ok && (
           <div className="p-4 bg-red-500/10 border border-red-500/20 rounded-lg">
             <div className="flex items-start gap-2">
               <HelpCircle className="h-5 w-5 text-red-500 mt-0.5" />
               <div className="text-sm">
-                <div className="font-medium text-red-500 mb-1">LTV demasiado alto</div>
-                <p className="text-muted-foreground">
-                  El LTV máximo permitido es {(ltvMax * 100).toFixed(0)}%. Reduce la cantidad a prestar o aumenta el
-                  colateral.
-                </p>
+                <div className="font-medium text-red-500 mb-1">Error</div>
+                <p className="text-muted-foreground">{borrowGuard.reason}</p>
               </div>
             </div>
           </div>
@@ -356,7 +356,6 @@ export default function NewVaultPage() {
           </div>
         </div>
 
-        {/* Progress Steps */}
         <div className="flex items-center justify-center space-x-4 mb-8">
           {[1, 2, 3].map((step) => (
             <div key={step} className="flex items-center">
@@ -388,7 +387,6 @@ export default function NewVaultPage() {
           </CardContent>
         </Card>
 
-        {/* Navigation */}
         <div className="flex justify-between">
           <Button
             variant="outline"
@@ -410,10 +408,12 @@ export default function NewVaultPage() {
               <ArrowRight className="h-4 w-4" />
             </Button>
           ) : (
-            <Button onClick={() => setShowTxModal(true)} disabled={!canCreate} className="gap-2">
-              Crear vault
-              <ArrowRight className="h-4 w-4" />
-            </Button>
+            <ActionButton disabled={!borrowGuard.ok} reason={borrowGuard.reason} onClick={() => setShowTxModal(true)}>
+              <div className="flex items-center gap-2">
+                Crear vault
+                <ArrowRight className="h-4 w-4" />
+              </div>
+            </ActionButton>
           )}
         </div>
 
