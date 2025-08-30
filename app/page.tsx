@@ -2,7 +2,7 @@
 
 import Link from "next/link"
 import { useState, useEffect } from "react"
-import { PlusCircle, Search, Wallet, TrendingUp, Zap, User } from "lucide-react"
+import { PlusCircle, Search, Wallet, Zap, User } from "lucide-react"
 import { MainLayout } from "@/components/layout/main-layout"
 
 export default function HomePage() {
@@ -158,41 +158,6 @@ export default function HomePage() {
               <div className="text-2xl font-bold text-gray-900 dark:text-white">65%</div>
               <div className="text-sm text-gray-600 dark:text-gray-400">LTV promedio</div>
             </div>
-          </div>
-        </div>
-
-        {/* Quick Actions */}
-        <div className="p-6 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
-          <h3 className="text-lg font-semibold mb-4 text-gray-900 dark:text-white">Acciones rápidas</h3>
-          <div className="flex flex-wrap gap-3">
-            <Link
-              href="/new"
-              className="flex items-center gap-2 px-4 py-2 bg-gray-600 dark:bg-gray-700 text-white rounded-md hover:bg-gray-700 dark:hover:bg-gray-600 transition-colors"
-            >
-              <PlusCircle className="h-4 w-4" />
-              Crear vault
-            </Link>
-            <Link
-              href="/vaults"
-              className="flex items-center gap-2 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 transition-colors"
-            >
-              <Search className="h-4 w-4" />
-              Explorar vaults
-            </Link>
-            <Link
-              href="/me"
-              className="flex items-center gap-2 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 transition-colors"
-            >
-              <Wallet className="h-4 w-4" />
-              Mis vaults
-            </Link>
-            <Link
-              href="/liquidations"
-              className="flex items-center gap-2 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 transition-colors"
-            >
-              <TrendingUp className="h-4 w-4" />
-              Ver liquidaciones
-            </Link>
           </div>
         </div>
       </div>
