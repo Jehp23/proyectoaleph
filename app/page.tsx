@@ -2,12 +2,13 @@
 
 import Link from "next/link"
 import { useState, useEffect } from "react"
-import { PlusCircle, Search, Wallet, Zap, User } from "lucide-react"
+import { PlusCircle, Search, Wallet, Zap, User, Settings } from "lucide-react"
 import { MainLayout } from "@/components/layout/main-layout"
+import { useExecutionMode } from "@/lib/execution-mode-context"
 
 export default function HomePage() {
   const [btcPrice, setBtcPrice] = useState(45000)
-  const [executionMode, setExecutionMode] = useState<"manual" | "assisted">("manual")
+  const { mode, setMode, isManualMode, isAssistedMode } = useExecutionMode()
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -27,41 +28,41 @@ export default function HomePage() {
           </h3>
           <div className="flex flex-col sm:flex-row gap-4">
             <button
-              onClick={() => setExecutionMode("manual")}
+              onClick={() => setMode("manual")}
               className={`flex-1 p-4 rounded-lg border transition-all ${
-                executionMode === "manual"
-                  ? "border-gray-400 dark:border-gray-500 bg-gray-50 dark:bg-gray-700"
+                isManualMode
+                  ? "border-blue-500 dark:border-blue-400 bg-blue-50 dark:bg-blue-900/20"
                   : "border-gray-200 dark:border-gray-600 hover:border-gray-300 dark:hover:border-gray-500"
               }`}
             >
               <div className="flex items-center gap-2 mb-2">
                 <User className="h-4 w-4" />
-                <span className="font-semibold text-gray-900 dark:text-white">Modo Manual</span>
-                <span className="px-2 py-1 bg-gray-100 dark:bg-gray-700 rounded text-xs text-gray-600 dark:text-gray-400">
+                <span className="font-semibold text-gray-900 dark:text-white">Modo Manual (Lite)</span>
+                <span className="px-2 py-1 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 rounded text-xs">
                   Gratis
                 </span>
               </div>
               <p className="text-sm text-left text-gray-600 dark:text-gray-400">
-                Ejecutás tus propias transacciones. Control total, pagás tu propio gas.
+                Interfaz simplificada. Ejecutás tus propias transacciones, pagás tu propio gas.
               </p>
             </button>
             <button
-              onClick={() => setExecutionMode("assisted")}
+              onClick={() => setMode("assisted")}
               className={`flex-1 p-4 rounded-lg border transition-all ${
-                executionMode === "assisted"
-                  ? "border-gray-400 dark:border-gray-500 bg-gray-50 dark:bg-gray-700"
+                isAssistedMode
+                  ? "border-blue-500 dark:border-blue-400 bg-blue-50 dark:bg-blue-900/20"
                   : "border-gray-200 dark:border-gray-600 hover:border-gray-300 dark:hover:border-gray-500"
               }`}
             >
               <div className="flex items-center gap-2 mb-2">
-                <Zap className="h-4 w-4" />
-                <span className="font-semibold text-gray-900 dark:text-white">Modo Asistido</span>
-                <span className="px-2 py-1 border border-gray-300 dark:border-gray-600 rounded text-xs text-gray-600 dark:text-gray-400">
+                <Settings className="h-4 w-4" />
+                <span className="font-semibold text-gray-900 dark:text-white">Modo Asistido (Pro)</span>
+                <span className="px-2 py-1 bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300 rounded text-xs">
                   0.5% fee
                 </span>
               </div>
               <p className="text-sm text-left text-gray-600 dark:text-gray-400">
-                Nosotros ejecutamos por vos. Sin gas, solo firmás una vez.
+                Controles avanzados. Nosotros ejecutamos por vos, sin gas, solo firmás una vez.
               </p>
             </button>
           </div>
@@ -69,9 +70,13 @@ export default function HomePage() {
 
         {/* Hero Section */}
         <div className="text-center space-y-4">
-          <h1 className="text-4xl font-bold text-gray-900 dark:text-white">Caución cripto no-custodial</h1>
+          <h1 className="text-4xl font-bold text-gray-900 dark:text-white">
+            {isManualMode ? "Caución cripto simple" : "Caución cripto profesional"}
+          </h1>
           <p className="text-xl text-gray-600 dark:text-gray-400 max-w-2xl mx-auto">
-            Depositá BTC como colateral y tomá préstamos en USDT de forma descentralizada y segura
+            {isManualMode
+              ? "Depositá BTC como colateral y tomá préstamos en USDT de forma fácil y segura"
+              : "Plataforma avanzada de préstamos descentralizados con herramientas profesionales"}
           </p>
         </div>
 
@@ -93,12 +98,16 @@ export default function HomePage() {
                 <div className="mx-auto h-12 w-12 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center mb-4">
                   <PlusCircle className="h-6 w-6 text-gray-600 dark:text-gray-400" />
                 </div>
-                <h3 className="text-xl font-semibold mb-2 text-gray-900 dark:text-white">Crear vault</h3>
+                <h3 className="text-xl font-semibold mb-2 text-gray-900 dark:text-white">
+                  {isManualMode ? "Crear vault" : "Crear vault avanzado"}
+                </h3>
                 <p className="text-gray-600 dark:text-gray-400 mb-3">
-                  Deposita BTC como colateral y toma un préstamo en USDT
+                  {isManualMode
+                    ? "Deposita BTC como colateral y toma un préstamo en USDT"
+                    : "Configuración avanzada con parámetros personalizables y análisis de riesgo"}
                 </p>
                 <span className="px-2 py-1 bg-gray-100 dark:bg-gray-700 rounded text-xs text-gray-600 dark:text-gray-400">
-                  {executionMode === "manual" ? "Modo Manual" : "Modo Asistido"}
+                  {isManualMode ? "Modo Lite" : "Modo Pro"}
                 </span>
               </div>
             </div>
@@ -133,7 +142,7 @@ export default function HomePage() {
           </Link>
         </div>
 
-        {/* KPI Cards */}
+        {/* KPI Cards - Show different metrics based on mode */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
           <div className="p-6 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
             <div className="text-center">
@@ -155,8 +164,10 @@ export default function HomePage() {
           </div>
           <div className="p-6 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
             <div className="text-center">
-              <div className="text-2xl font-bold text-gray-900 dark:text-white">65%</div>
-              <div className="text-sm text-gray-600 dark:text-gray-400">LTV promedio</div>
+              <div className="text-2xl font-bold text-gray-900 dark:text-white">{isAssistedMode ? "1.85" : "65%"}</div>
+              <div className="text-sm text-gray-600 dark:text-gray-400">
+                {isAssistedMode ? "Health Factor promedio" : "LTV promedio"}
+              </div>
             </div>
           </div>
         </div>

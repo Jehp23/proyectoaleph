@@ -6,6 +6,7 @@ import { WagmiProvider } from "wagmi"
 import { RainbowKitProvider, darkTheme, lightTheme } from "@rainbow-me/rainbowkit"
 import { config } from "@/lib/wagmi"
 import { useTheme } from "next-themes"
+import { ExecutionModeProvider } from "@/lib/execution-mode-context"
 import type { ReactNode } from "react"
 
 const queryClient = new QueryClient()
@@ -30,7 +31,9 @@ export function Providers({ children }: { children: ReactNode }) {
   return (
     <WagmiProvider config={config}>
       <QueryClientProvider client={queryClient}>
-        <RainbowKitThemeProvider>{children}</RainbowKitThemeProvider>
+        <RainbowKitThemeProvider>
+          <ExecutionModeProvider>{children}</ExecutionModeProvider>
+        </RainbowKitThemeProvider>
       </QueryClientProvider>
     </WagmiProvider>
   )
