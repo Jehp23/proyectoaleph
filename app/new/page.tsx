@@ -59,9 +59,8 @@ export default function NewVaultPage() {
   // Calculate borrow amount based on LTV
   const borrowAmountUsd = collateralValueUsd > 0 ? (collateralValueUsd * BigInt(ltv)) / BigInt(100) : BigInt(0)
 
-  // Convert to USDT wei (6 decimals)
   const borrowAmountUsdt =
-    borrowAmountUsd * BigInt(10) ** BigInt(PRECISION_CONSTANTS.PRICE_DECIMALS - PRECISION_CONSTANTS.USDT_DECIMALS)
+    borrowAmountUsd / BigInt(10) ** BigInt(PRECISION_CONSTANTS.PRICE_DECIMALS - PRECISION_CONSTANTS.USDT_DECIMALS)
 
   // Calculate liquidation price with exact precision
   const liquidationPrice =
@@ -78,24 +77,7 @@ export default function NewVaultPage() {
       return BigInt(999) * PRECISION_CONSTANTS.HEALTH_FACTOR_MULTIPLIER // No debt = infinite health factor
     }
 
-    const result = calculateHealthFactor(
-      btcCollateralSatoshis,
-      borrowAmountUsdt,
-      btcPriceBigInt,
-      liquidationThresholdBP,
-    )
-
-    console.log("[v0] Health Factor Debug:", {
-      btcCollateralSatoshis: btcCollateralSatoshis.toString(),
-      borrowAmountUsdt: borrowAmountUsdt.toString(),
-      btcPriceBigInt: btcPriceBigInt.toString(),
-      liquidationThresholdBP: liquidationThresholdBP.toString(),
-      healthFactorRaw: result.toString(),
-      healthFactorMultiplier: PRECISION_CONSTANTS.HEALTH_FACTOR_MULTIPLIER.toString(),
-      healthFactorDecimals: PRECISION_CONSTANTS.HEALTH_FACTOR_DECIMALS,
-    })
-
-    return result
+    return calculateHealthFactor(btcCollateralSatoshis, borrowAmountUsdt, btcPriceBigInt, liquidationThresholdBP)
   })()
 
   // Safe conversions for display only
@@ -107,16 +89,7 @@ export default function NewVaultPage() {
       return 999 // Display as very high number when no debt
     }
 
-    const displayValue = safeToNumber(healthFactor, PRECISION_CONSTANTS.HEALTH_FACTOR_DECIMALS)
-
-    console.log("[v0] Health Factor Display Debug:", {
-      healthFactorRaw: healthFactor.toString(),
-      displayValue,
-      multiplier: PRECISION_CONSTANTS.HEALTH_FACTOR_MULTIPLIER.toString(),
-      decimals: PRECISION_CONSTANTS.HEALTH_FACTOR_DECIMALS,
-    })
-
-    return displayValue
+    return safeToNumber(healthFactor, PRECISION_CONSTANTS.HEALTH_FACTOR_DECIMALS)
   })()
 
   const liquidationPriceDisplay = safeToNumber(liquidationPrice, PRECISION_CONSTANTS.PRICE_DECIMALS)
