@@ -4,12 +4,12 @@ import { useVault } from "@/hooks/useVault"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Wallet, AlertCircle, CheckCircle } from "lucide-react"
-import { formatUnits, mockWallet } from "@/lib/mock-blockchain"
+import { formatUnits } from "@/lib/mock-blockchain"
+import { useAccount } from "wagmi"
 
 export function WalletStatus() {
   const { vault, balances, isLoading } = useVault()
-  const isConnected = mockWallet.isConnected
-  const address = mockWallet.address
+  const { address, isConnected } = useAccount()
 
   if (!isConnected) {
     return (

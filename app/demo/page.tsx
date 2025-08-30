@@ -10,10 +10,11 @@ import { useVault } from "@/hooks/useVault"
 import { TrendingDown, Zap, AlertTriangle, Play, RotateCcw } from "lucide-react"
 import { WalletStatus } from "@/components/ui/wallet-status"
 import { VaultActions } from "@/components/ui/vault-actions"
-import { formatUnits, mockWallet } from "@/lib/mock-blockchain"
+import { formatUnits } from "@/lib/mock-blockchain"
+import { useAccount } from "wagmi"
 
 export default function DemoPage() {
-  const isConnected = mockWallet.isConnected
+  const { isConnected } = useAccount()
   const { protocol, vault, refreshData } = useVault()
   const [isSimulating, setIsSimulating] = useState(false)
 

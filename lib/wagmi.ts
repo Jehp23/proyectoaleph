@@ -1,5 +1,8 @@
 "use client"
 
+import { getDefaultConfig } from "@rainbow-me/rainbowkit"
+import { sepolia, hardhat } from "wagmi/chains"
+
 export const SUPPORTED_CHAINS = {
   sepolia: {
     id: 11155111,
@@ -13,8 +16,9 @@ export const SUPPORTED_CHAINS = {
   },
 } as const
 
-export const config = {
+export const config = getDefaultConfig({
   appName: "CauciónBTC",
   projectId: process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID || "caucionbtc-demo",
-  chains: [SUPPORTED_CHAINS.sepolia, SUPPORTED_CHAINS.hardhat],
-}
+  chains: [sepolia, hardhat],
+  ssr: true,
+})

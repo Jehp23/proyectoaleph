@@ -2,8 +2,8 @@
 
 import { useState, useEffect } from "react"
 import { useToast } from "@/hooks/use-toast"
+import { useAccount } from "wagmi"
 import {
-  mockWallet,
   mockBalances,
   mockVault,
   mockProtocol,
@@ -18,6 +18,7 @@ export interface ProtocolData extends MockProtocolData {}
 
 export function useVault() {
   const { toast } = useToast()
+  const { isConnected } = useAccount()
   const [isLoading, setIsLoading] = useState(false)
   const [vault, setVault] = useState<VaultData>(mockVault)
   const [protocol, setProtocol] = useState<ProtocolData>(mockProtocol)
@@ -148,6 +149,6 @@ export function useVault() {
 
     // States
     isLoading,
-    isConnected: mockWallet.isConnected,
+    isConnected,
   }
 }

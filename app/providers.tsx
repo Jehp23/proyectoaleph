@@ -1,40 +1,37 @@
 "use client"
 
-import { createContext, useContext, useState, type ReactNode } from "react"
+import "@rainbow-me/rainbowkit/styles.css"
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
+import { WagmiProvider } from "wagmi"
+import { RainbowKitProvider, darkTheme, lightTheme } from "@rainbow-me/rainbowkit"
+import { config } from "@/lib/wagmi"
+import { useTheme } from "next-themes"
+import type { ReactNode } from "react"
 
-// Mock wallet context to replace RainbowKit functionality
-interface WalletContextType {
-  address: string | null
-  isConnected: boolean
-  connect: () => void
-  disconnect: () => void
-}
+const queryClient = new QueryClient()
 
-const WalletContext = createContext<WalletContextType | null>(null)
+function RainbowKitThemeProvider({ children }: { children: ReactNode }) {
+  const { theme } = useTheme()
 
-export function useAccount() {
-  const context = useContext(WalletContext)
-  if (!context) {
-    throw new Error("useAccount must be used within Providers")
-  }
-  return context
+  return (
+    <RainbowKitProvider
+      theme={theme === "dark" ? darkTheme() : lightTheme()}
+      appInfo={{
+        appName: "CauciónBTC",
+        learnMoreUrl: "https://caucionbtc.com",
+      }}
+    >
+      {children}
+    </RainbowKitProvider>
+  )
 }
 
 export function Providers({ children }: { children: ReactNode }) {
-  const [address, setAddress] = useState<string | null>(null)
-  const [isConnected, setIsConnected] = useState(false)
-
-  const connect = () => {
-    setAddress("0x742d35Cc6634C0532925a3b8D4C9db96590c6C87")
-    setIsConnected(true)
-  }
-
-  const disconnect = () => {
-    setAddress(null)
-    setIsConnected(false)
-  }
-
   return (
-    <WalletContext.Provider value={{ address, isConnected, connect, disconnect }}>{children}</WalletContext.Provider>
+    <WagmiProvider config={config}>
+      <QueryClientProvider client={queryClient}>
+        <RainbowKitThemeProvider>{children}</RainbowKitThemeProvider>
+      </QueryClientProvider>
+    </WagmiProvider>
   )
 }
