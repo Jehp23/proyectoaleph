@@ -13,6 +13,7 @@ import { Separator } from "@/components/ui/separator"
 import { Settings, Code, Save, Globe, Palette, Sun, Moon } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { loadAddresses, saveAddresses, clearAddresses, loadFromEnv } from "@/lib/addresses"
+import { EXPLORER_BASE } from "@/lib/explorer"
 import { isAddress } from "viem"
 
 type FormState = {
@@ -323,9 +324,17 @@ export default function SettingsPage() {
                   <span className="font-medium">11155111</span>
                 </div>
                 <div className="flex justify-between">
+                  <span className="text-muted-foreground">Explorer base:</span>
+                  <span className="font-medium font-mono text-xs">{EXPLORER_BASE}</span>
+                </div>
+                <div className="flex justify-between">
                   <span className="text-muted-foreground">Clave localStorage:</span>
                   <span className="font-medium font-mono text-xs">protocol.addresses</span>
                 </div>
+              </div>
+              <div className="mt-3 text-xs text-muted-foreground">
+                Puedes forzar el explorer con{" "}
+                <code className="bg-background px-1 rounded">NEXT_PUBLIC_EXPLORER_BASE</code>
               </div>
             </div>
           </CardContent>
