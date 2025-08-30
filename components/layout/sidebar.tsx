@@ -2,7 +2,6 @@
 import { Button } from "@/components/ui/button"
 import { Home, PlusCircle, Search, Wallet, Settings, Menu, Zap } from "lucide-react"
 import Link from "next/link"
-import { usePathname } from "next/navigation"
 import { useState } from "react"
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
 
@@ -16,7 +15,6 @@ const navigation = [
 ]
 
 export function Sidebar() {
-  const pathname = usePathname()
   const [open, setOpen] = useState(false)
 
   const SidebarContent = () => (
@@ -25,7 +23,10 @@ export function Sidebar() {
         {navigation.map((item) => {
           return (
             <Link key={item.name} href={item.href} onClick={() => setOpen(false)}>
-              <Button variant="ghost" className="w-full justify-start gap-3 text-left">
+              <Button
+                variant="ghost"
+                className="w-full justify-start gap-3 text-left hover:bg-accent hover:text-accent-foreground"
+              >
                 <item.icon className="h-5 w-5" />
                 {item.name}
               </Button>
@@ -70,7 +71,11 @@ export function Sidebar() {
             {navigation.slice(0, 5).map((item) => {
               return (
                 <Link key={item.name} href={item.href}>
-                  <Button variant="ghost" size="sm" className="flex flex-col gap-1 h-auto py-2 px-3">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="flex flex-col gap-1 h-auto py-2 px-3 hover:bg-accent hover:text-accent-foreground"
+                  >
                     <item.icon className="h-4 w-4" />
                     <span className="text-xs">{item.name.split(" ")[0]}</span>
                   </Button>
