@@ -2,18 +2,15 @@
 
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { useAccount, useConnect, useDisconnect } from "wagmi"
+import { useAccount, useConnect, useDisconnect } from "@/lib/mock-wallet"
 
 export function Header() {
   const { address, isConnected } = useAccount()
-  const { connect, connectors } = useConnect()
+  const { connect } = useConnect()
   const { disconnect } = useDisconnect()
 
   const handleConnect = () => {
-    const metaMaskConnector = connectors.find((connector) => connector.name === "MetaMask")
-    if (metaMaskConnector) {
-      connect({ connector: metaMaskConnector })
-    }
+    connect()
   }
 
   return (
