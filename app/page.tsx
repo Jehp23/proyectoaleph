@@ -71,7 +71,7 @@ export default function HomePage() {
             </Link>
             <Link
               href="/new"
-              className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 border-l-4 border-blue-600"
+              className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300"
             >
               <PlusCircle className="h-4 w-4" />
               Crear Vault
@@ -137,7 +137,7 @@ export default function HomePage() {
           {/* Page content */}
           <main className="flex-1 overflow-auto p-6">
             {/* Execution Mode Selector */}
-            <div className="mb-8 p-6 border-2 border-blue-200 dark:border-blue-800 rounded-lg bg-white dark:bg-gray-800">
+            <div className="mb-8 p-6 border border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800">
               <h3 className="text-lg font-semibold mb-4 text-gray-900 dark:text-white flex items-center gap-2">
                 <Zap className="h-5 w-5" />
                 Modo de Ejecución
@@ -145,9 +145,9 @@ export default function HomePage() {
               <div className="flex flex-col sm:flex-row gap-4">
                 <button
                   onClick={() => setExecutionMode("manual")}
-                  className={`flex-1 p-4 rounded-lg border-2 transition-all ${
+                  className={`flex-1 p-4 rounded-lg border transition-all ${
                     executionMode === "manual"
-                      ? "border-blue-500 bg-blue-50 dark:bg-blue-900/20"
+                      ? "border-gray-400 dark:border-gray-500 bg-gray-50 dark:bg-gray-700"
                       : "border-gray-200 dark:border-gray-600 hover:border-gray-300 dark:hover:border-gray-500"
                   }`}
                 >
@@ -164,9 +164,9 @@ export default function HomePage() {
                 </button>
                 <button
                   onClick={() => setExecutionMode("assisted")}
-                  className={`flex-1 p-4 rounded-lg border-2 transition-all ${
+                  className={`flex-1 p-4 rounded-lg border transition-all ${
                     executionMode === "assisted"
-                      ? "border-blue-500 bg-blue-50 dark:bg-blue-900/20"
+                      ? "border-gray-400 dark:border-gray-500 bg-gray-50 dark:bg-gray-700"
                       : "border-gray-200 dark:border-gray-600 hover:border-gray-300 dark:hover:border-gray-500"
                   }`}
                 >
@@ -205,22 +205,16 @@ export default function HomePage() {
             {/* CTA Cards */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
               <Link href="/new" className="block">
-                <div className="p-6 bg-white dark:bg-gray-800 rounded-lg border-2 border-gray-200 dark:border-gray-700 hover:border-blue-500 dark:hover:border-blue-500 transition-all cursor-pointer group">
+                <div className="p-6 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 hover:border-gray-400 dark:hover:border-gray-500 transition-all cursor-pointer group">
                   <div className="text-center">
-                    <div className="mx-auto h-12 w-12 rounded-full bg-blue-100 dark:bg-blue-900 flex items-center justify-center mb-4">
-                      <PlusCircle className="h-6 w-6 text-blue-600 dark:text-blue-400" />
+                    <div className="mx-auto h-12 w-12 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center mb-4">
+                      <PlusCircle className="h-6 w-6 text-gray-600 dark:text-gray-400" />
                     </div>
                     <h3 className="text-xl font-semibold mb-2 text-gray-900 dark:text-white">Crear vault</h3>
                     <p className="text-gray-600 dark:text-gray-400 mb-3">
                       Deposita BTC como colateral y toma un préstamo en USDT
                     </p>
-                    <span
-                      className={`px-2 py-1 rounded text-xs ${
-                        executionMode === "manual"
-                          ? "bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400"
-                          : "bg-blue-100 dark:bg-blue-900 text-blue-600 dark:text-blue-400"
-                      }`}
-                    >
+                    <span className="px-2 py-1 bg-gray-100 dark:bg-gray-700 rounded text-xs text-gray-600 dark:text-gray-400">
                       {executionMode === "manual" ? "Modo Manual" : "Modo Asistido"}
                     </span>
                   </div>
@@ -228,10 +222,10 @@ export default function HomePage() {
               </Link>
 
               <Link href="/me" className="block">
-                <div className="p-6 bg-white dark:bg-gray-800 rounded-lg border-2 border-gray-200 dark:border-gray-700 hover:border-green-500 transition-all cursor-pointer">
+                <div className="p-6 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 hover:border-gray-400 dark:hover:border-gray-500 transition-all cursor-pointer">
                   <div className="text-center">
-                    <div className="mx-auto h-12 w-12 rounded-full bg-green-100 dark:bg-green-900 flex items-center justify-center mb-4">
-                      <Wallet className="h-6 w-6 text-green-600 dark:text-green-400" />
+                    <div className="mx-auto h-12 w-12 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center mb-4">
+                      <Wallet className="h-6 w-6 text-gray-600 dark:text-gray-400" />
                     </div>
                     <h3 className="text-xl font-semibold mb-2 text-gray-900 dark:text-white">Gestionar vaults</h3>
                     <p className="text-gray-600 dark:text-gray-400">
@@ -242,10 +236,10 @@ export default function HomePage() {
               </Link>
 
               <Link href="/vaults" className="block">
-                <div className="p-6 bg-white dark:bg-gray-800 rounded-lg border-2 border-gray-200 dark:border-gray-700 hover:border-yellow-500 transition-all cursor-pointer">
+                <div className="p-6 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 hover:border-gray-400 dark:hover:border-gray-500 transition-all cursor-pointer">
                   <div className="text-center">
-                    <div className="mx-auto h-12 w-12 rounded-full bg-yellow-100 dark:bg-yellow-900 flex items-center justify-center mb-4">
-                      <Search className="h-6 w-6 text-yellow-600 dark:text-yellow-400" />
+                    <div className="mx-auto h-12 w-12 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center mb-4">
+                      <Search className="h-6 w-6 text-gray-600 dark:text-gray-400" />
                     </div>
                     <h3 className="text-xl font-semibold mb-2 text-gray-900 dark:text-white">Explorar vaults</h3>
                     <p className="text-gray-600 dark:text-gray-400">
@@ -290,7 +284,7 @@ export default function HomePage() {
               <div className="flex flex-wrap gap-3">
                 <Link
                   href="/new"
-                  className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+                  className="flex items-center gap-2 px-4 py-2 bg-gray-600 dark:bg-gray-700 text-white rounded-md hover:bg-gray-700 dark:hover:bg-gray-600 transition-colors"
                 >
                   <PlusCircle className="h-4 w-4" />
                   Crear vault
