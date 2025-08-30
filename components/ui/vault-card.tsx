@@ -54,9 +54,10 @@ export function VaultCard({ vault, onAddCollateral, onBorrowMore, onRepay }: Vau
           </div>
         </div>
 
-        <div className="flex items-center justify-between">
+        <div className="space-y-3">
           <HealthBadge level={vault.healthLevel} healthFactor={vault.healthFactor} />
-          <div className="flex items-center gap-2">
+
+          <div className="flex flex-wrap gap-2">
             <Link href={`/vaults/${vault.id}`}>
               <Button variant="outline" size="sm" className="gap-2 bg-transparent">
                 <Eye className="h-4 w-4" />
@@ -64,7 +65,7 @@ export function VaultCard({ vault, onAddCollateral, onBorrowMore, onRepay }: Vau
               </Button>
             </Link>
             {vault.status === "Active" && (
-              <div className="flex items-center gap-1">
+              <>
                 {onAddCollateral && (
                   <Button size="sm" variant="outline" onClick={() => onAddCollateral(vault.id)} className="gap-1">
                     <Plus className="h-3 w-3" />
@@ -83,7 +84,7 @@ export function VaultCard({ vault, onAddCollateral, onBorrowMore, onRepay }: Vau
                     Pagar
                   </Button>
                 )}
-              </div>
+              </>
             )}
           </div>
         </div>
