@@ -1,6 +1,64 @@
 @import "tailwindcss";
 @import "tw-animate-css";
-/* Removed RainbowKit CSS import that was causing MIME type error */
+/* Added essential RainbowKit styles inline to fix wallet connection bug */
+/* RainbowKit Button Styles */
+[data-rk] {
+  --rk-fonts-body: var(--font-sans);
+  --rk-radii-actionButton: 0.625rem;
+  --rk-radii-connectButton: 0.625rem;
+  --rk-radii-menuButton: 0.625rem;
+  --rk-radii-modal: 0.625rem;
+  --rk-radii-modalMobile: 0.625rem;
+}
+
+[data-rk] button {
+  font-family: var(--font-sans);
+  font-weight: 500;
+  transition: all 0.2s ease;
+}
+
+[data-rk] button:hover {
+  transform: translateY(-1px);
+}
+
+/* Connect Button Specific Styles */
+[data-rk] [data-testid="rk-connect-button"] {
+  background: hsl(var(--primary));
+  color: hsl(var(--primary-foreground));
+  border: 1px solid hsl(var(--border));
+  border-radius: var(--radius);
+  padding: 0.5rem 1rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+[data-rk] [data-testid="rk-connect-button"]:hover {
+  background: hsl(var(--primary) / 0.9);
+}
+
+/* Account Button Styles */
+[data-rk] [data-testid="rk-account-button"] {
+  background: hsl(var(--secondary));
+  color: hsl(var(--secondary-foreground));
+  border: 1px solid hsl(var(--border));
+  border-radius: var(--radius);
+  padding: 0.5rem 1rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+/* Modal Styles */
+[data-rk] [data-testid="rk-modal-overlay"] {
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(4px);
+}
+
+[data-rk] [data-testid="rk-modal"] {
+  background: hsl(var(--background));
+  border: 1px solid hsl(var(--border));
+  border-radius: var(--radius);
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+}
 
 @custom-variant dark (&:is(.dark *));
 
