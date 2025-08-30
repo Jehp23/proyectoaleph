@@ -1,5 +1,7 @@
 @import "tailwindcss";
 @import "tw-animate-css";
+/* Added RainbowKit styles import to fix CSS loading issue */
+@import "@rainbow-me/rainbowkit/styles.css";
 
 @custom-variant dark (&:is(.dark *));
 
