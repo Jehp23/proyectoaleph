@@ -1,7 +1,8 @@
 "use client"
 
-import { getDefaultConfig } from "@rainbow-me/rainbowkit"
+import { createConfig, http } from "wagmi"
 import { sepolia, hardhat } from "wagmi/chains"
+import { metaMask, walletConnect } from "wagmi/connectors"
 
 export const SUPPORTED_CHAINS = {
   sepolia: {
@@ -16,9 +17,16 @@ export const SUPPORTED_CHAINS = {
   },
 } as const
 
-export const config = getDefaultConfig({
-  appName: "CauciónBTC",
-  projectId: process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID || "caucionbtc-demo",
+export const config = createConfig({
   chains: [sepolia, hardhat],
-  ssr: true,
+  connectors: [
+    metaMask(),
+    walletConnect({
+      projectId: process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID || "caucionbtc-demo",
+    }),
+  ],
+  transports: {
+    [sepolia.id]: http(process.env.NEXT_PUBLIC_SEPOLIA_RPC_URL),
+    [hardhat.id]: http("http://127.0.0.1:8545"),
+  },
 })
