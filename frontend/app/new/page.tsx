@@ -1,96 +1,116 @@
-"use client"
+"use client";
 
-import { useState } from "react"
-import { MainLayout } from "@/components/layout/main-layout"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Separator } from "@/components/ui/separator"
-import { TxModal } from "@/components/ui/tx-modal"
-import { Money } from "@/components/ui/money"
-import { LtvSlider } from "@/components/ui/ltv-slider"
-import { useStore } from "@/lib/store"
-import { ArrowLeft, ArrowRight, HelpCircle, Shield, Bitcoin } from "lucide-react"
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
-import { useRouter } from "next/navigation"
+import { useState, useMemo } from "react";
+import { MainLayout } from "@/components/layout/main-layout";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Separator } from "@/components/ui/separator";
+import { TxModal } from "@/components/ui/tx-modal";
+import { Money } from "@/components/ui/money";
+import { LtvSlider } from "@/components/ui/ltv-slider";
+import { useStore } from "@/lib/store";
+import { ArrowLeft, ArrowRight, HelpCircle, Shield, Bitcoin } from "lucide-react";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import { useRouter } from "next/navigation";
 import {
   stringToBigInt,
-  calculateHealthFactor,
   calculateLiquidationPrice,
   PRECISION_CONSTANTS,
   safeToNumber,
-} from "@/lib/precision-math"
+} from "@/lib/precision-math";
 
 export default function NewVaultPage() {
-  const { createVault, btcPrice } = useStore()
-  const router = useRouter()
-  const [currentStep, setCurrentStep] = useState(1)
-  const [showTxModal, setShowTxModal] = useState(false)
+  const { createVault, btcPrice } = useStore();
+  const router = useRouter();
+  const [currentStep, setCurrentStep] = useState(1);
+  const [showTxModal, setShowTxModal] = useState(false);
 
   // Form state
-  const [btcAmount, setBtcAmount] = useState("")
-  const [ltv, setLtv] = useState(50) // Default 50% LTV
-  const [interestRate] = useState(8.5) // Fixed 8.5% annual interest rate
-  const [liquidationThreshold] = useState(75) // Fixed 75% liquidation threshold
+  const [btcAmount, setBtcAmount] = useState("");
+  const [ltv, setLtv] = useState(50);              // 50% por defecto
+  const [interestRate] = useState(8.5);           // 8.5% anual (fijo)
+  const [liquidationThreshold] = useState(75);    // 75% (fijo)
 
   const safeParseBtcAmount = (amount: string): bigint => {
     if (!amount || amount.trim() === "" || !/^\d+(\.\d+)?$/.test(amount.trim())) {
-      return BigInt(0)
+      return 0n;
     }
     try {
-      return stringToBigInt(amount.trim(), PRECISION_CONSTANTS.BTC_DECIMALS)
+      return stringToBigInt(amount.trim(), PRECISION_CONSTANTS.BTC_DECIMALS);
     } catch {
-      return BigInt(0)
+      return 0n;
     }
-  }
+  };
 
-  // High-precision calculations
-  const btcCollateralSatoshis = safeParseBtcAmount(btcAmount)
-  const btcPriceBigInt = BigInt(Math.round(btcPrice * Number(PRECISION_CONSTANTS.PRICE_MULTIPLIER)))
-  const liquidationThresholdBP = BigInt(liquidationThreshold * 100) // Convert to basis points
+  // ---- Cálculos de alta precisión (BigInt) ----
+  const btcCollateralSatoshis = safeParseBtcAmount(btcAmount);
+  const btcPriceBigInt = BigInt(
+    Math.round(btcPrice * Number(PRECISION_CONSTANTS.PRICE_MULTIPLIER))
+  );
+  const liquidationThresholdBP = BigInt(liquidationThreshold * 100); // basis points
 
-  // Calculate collateral value in USD (exact precision)
+  // Valor del colateral en USD (con decimales PRICE_DECIMALS)
   const collateralValueUsd =
-    btcCollateralSatoshis > 0
-      ? (btcCollateralSatoshis * btcPriceBigInt) / PRECISION_CONSTANTS.BTC_SATOSHI_MULTIPLIER
-      : BigInt(0)
+    btcCollateralSatoshis > 0n
+      ? (btcCollateralSatoshis * btcPriceBigInt) /
+        PRECISION_CONSTANTS.BTC_SATOSHI_MULTIPLIER
+      : 0n;
 
-  // Calculate borrow amount based on LTV
-  const borrowAmountUsd = collateralValueUsd > 0 ? (collateralValueUsd * BigInt(ltv)) / BigInt(100) : BigInt(0)
+  // Monto a prestar (USD con decimales PRICE_DECIMALS) usando LTV
+  const borrowAmountUsd =
+    collateralValueUsd > 0n
+      ? (collateralValueUsd * BigInt(ltv)) / 100n
+      : 0n;
 
-  // Convert to USDT wei (6 decimals)
+  // A USDT (6 decimales): PRICE_DECIMALS -> USDT_DECIMALS
   const borrowAmountUsdt =
-    borrowAmountUsd * BigInt(10) ** BigInt(PRECISION_CONSTANTS.PRICE_DECIMALS - PRECISION_CONSTANTS.USDT_DECIMALS)
+    borrowAmountUsd *
+    (10n ** BigInt(
+      PRECISION_CONSTANTS.PRICE_DECIMALS - PRECISION_CONSTANTS.USDT_DECIMALS
+    ));
 
-  // Calculate liquidation price with exact precision
+  // Precio de liquidación (con decimales PRICE_DECIMALS)
   const liquidationPrice =
-    btcCollateralSatoshis > 0 && borrowAmountUsdt > 0
-      ? calculateLiquidationPrice(btcCollateralSatoshis, borrowAmountUsdt, liquidationThresholdBP)
-      : BigInt(0)
+    btcCollateralSatoshis > 0n && borrowAmountUsdt > 0n
+      ? calculateLiquidationPrice(
+          btcCollateralSatoshis,
+          borrowAmountUsdt,
+          liquidationThresholdBP
+        )
+      : 0n;
 
-  // Health factor calculation with exact precision
-  const healthFactor =
-    btcCollateralSatoshis > 0 && borrowAmountUsdt > 0
-      ? calculateHealthFactor(btcCollateralSatoshis, borrowAmountUsdt, btcPriceBigInt, liquidationThresholdBP)
-      : BigInt(999) * PRECISION_CONSTANTS.HEALTH_FACTOR_MULTIPLIER
+  // ---- Factor de salud para UI/validación (numérico) ----
+  // HF = (umbral_liquidación / LTV). Con 75% y LTV 61% => 1.23
+  const healthFactorNum = useMemo(() => {
+    if (ltv <= 0) return Infinity;
+    return liquidationThreshold / ltv;
+  }, [ltv, liquidationThreshold]);
 
-  // Safe conversions for display only
-  const healthFactorDisplay = safeToNumber(healthFactor, PRECISION_CONSTANTS.HEALTH_FACTOR_DECIMALS)
-  const liquidationPriceDisplay = safeToNumber(liquidationPrice, PRECISION_CONSTANTS.PRICE_DECIMALS)
+  // Para mostrar valores (solo display)
+  const liquidationPriceDisplay = safeToNumber(
+    liquidationPrice,
+    PRECISION_CONSTANTS.PRICE_DECIMALS
+  );
 
-  const canProceedStep1 = btcAmount && btcCollateralSatoshis > 0
-  const canProceedStep2 = borrowAmountUsdt > 0 && healthFactor > PRECISION_CONSTANTS.HEALTH_FACTOR_MULTIPLIER
-  const canCreate = canProceedStep1 && canProceedStep2
+  const canProceedStep1 = !!btcAmount && btcCollateralSatoshis > 0n;
+  const canProceedStep2 = borrowAmountUsdt > 0n && healthFactorNum > 1.0;
+  const canCreate = canProceedStep1 && canProceedStep2;
 
   const handleCreateVault = async () => {
-    if (!canCreate) return
+    if (!canCreate) return;
 
-    // Simulate transaction delay
-    await new Promise((resolve) => setTimeout(resolve, 1000))
+    // Simulación de delay de tx
+    await new Promise((resolve) => setTimeout(resolve, 1000));
 
     createVault({
-      owner: "0xYour...Address", // Placeholder
+      owner: "0xYour...Address", // placeholder
       btcCollateral: btcCollateralSatoshis,
       usdtBorrowed: borrowAmountUsdt,
       ltv,
@@ -98,50 +118,55 @@ export default function NewVaultPage() {
       status: "Active",
       btcPrice,
       interestRate,
-    })
+    });
 
-    router.push("/me")
-  }
+    router.push("/me");
+  };
 
   const renderStep1 = () => (
     <div className="space-y-6">
       <div>
         <h2 className="text-2xl font-bold mb-2">Depósito de colateral</h2>
-        <p className="text-muted-foreground">Especifica la cantidad de BTC que depositarás como colateral</p>
+        <p className="text-muted-foreground">
+          Especifica la cantidad de BTC que depositarás como colateral
+        </p>
       </div>
 
       <div className="space-y-2">
         <Label htmlFor="btc-amount">Cantidad de BTC</Label>
         <div className="relative">
-          <Bitcoin className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-orange-500" />
+          <Bitcoin className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-orange-500" />
           <Input
             id="btc-amount"
             type="text"
             placeholder="1.00000000"
             value={btcAmount}
             onChange={(e) => {
-              const value = e.target.value
+              const value = e.target.value;
               if (value === "" || /^\d*\.?\d{0,8}$/.test(value)) {
-                setBtcAmount(value)
+                setBtcAmount(value);
               }
             }}
             className="pl-10 font-mono"
             pattern="^\d+(\.\d{0,8})?$"
           />
         </div>
-        {btcAmount && collateralValueUsd > 0 && (
+
+        {btcAmount && collateralValueUsd > 0n && (
           <p className="text-sm text-muted-foreground">
             ≈ <Money amount={collateralValueUsd} currency="USD" />
           </p>
         )}
       </div>
 
-      {collateralValueUsd > 0 && (
+      {collateralValueUsd > 0n && (
         <Card className="bg-orange-500/5 border-orange-500/20">
           <CardContent className="p-4">
             <div className="flex items-center gap-2 mb-2">
               <Shield className="h-4 w-4 text-orange-500" />
-              <span className="font-medium text-orange-500">Información del colateral</span>
+              <span className="font-medium text-orange-500">
+                Información del colateral
+              </span>
             </div>
             <div className="grid grid-cols-2 gap-4 text-sm">
               <div>
@@ -161,21 +186,19 @@ export default function NewVaultPage() {
         </Card>
       )}
     </div>
-  )
+  );
 
   const renderStep2 = () => (
     <div className="space-y-6">
       <div>
         <h2 className="text-2xl font-bold mb-2">Configuración del préstamo</h2>
-        <p className="text-muted-foreground">Ajusta el ratio préstamo/colateral y revisa los parámetros</p>
+        <p className="text-muted-foreground">
+          Ajusta el ratio préstamo/colateral y revisa los parámetros
+        </p>
       </div>
 
       <div className="space-y-6">
-        <LtvSlider
-          value={ltv}
-          onChange={setLtv}
-          maxLtv={liquidationThreshold - 5} // 5% buffer from liquidation
-        />
+        <LtvSlider value={ltv} onChange={setLtv} maxLtv={liquidationThreshold - 5} />
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <Card>
@@ -191,9 +214,15 @@ export default function NewVaultPage() {
             <CardContent className="p-4">
               <div className="text-sm text-muted-foreground mb-1">Factor de salud</div>
               <div
-                className={`text-xl font-bold ${healthFactorDisplay >= 1.5 ? "text-green-500" : healthFactorDisplay >= 1.1 ? "text-yellow-500" : "text-red-500"}`}
+                className={`text-xl font-bold ${
+                  healthFactorNum >= 1.5
+                    ? "text-green-500"
+                    : healthFactorNum >= 1.1
+                    ? "text-yellow-500"
+                    : "text-red-500"
+                }`}
               >
-                {healthFactorDisplay.toFixed(2)}
+                {Number.isFinite(healthFactorNum) ? healthFactorNum.toFixed(2) : "∞"}
               </div>
             </CardContent>
           </Card>
@@ -209,7 +238,8 @@ export default function NewVaultPage() {
                 </TooltipTrigger>
                 <TooltipContent>
                   <p className="max-w-xs">
-                    Estos parámetros están fijados por el protocolo para garantizar la seguridad del sistema.
+                    Estos parámetros están fijados por el protocolo para garantizar la
+                    seguridad del sistema.
                   </p>
                 </TooltipContent>
               </Tooltip>
@@ -246,13 +276,15 @@ export default function NewVaultPage() {
         )}
       </div>
     </div>
-  )
+  );
 
   const renderStep3 = () => (
     <div className="space-y-6">
       <div>
         <h2 className="text-2xl font-bold mb-2">Confirmación</h2>
-        <p className="text-muted-foreground">Revisa los detalles antes de crear tu vault</p>
+        <p className="text-muted-foreground">
+          Revisa los detalles antes de crear tu vault
+        </p>
       </div>
 
       <Card>
@@ -290,9 +322,15 @@ export default function NewVaultPage() {
             <div>
               <div className="text-sm text-muted-foreground">Factor de salud</div>
               <div
-                className={`text-xl font-bold ${healthFactorDisplay >= 1.5 ? "text-green-500" : healthFactorDisplay >= 1.1 ? "text-yellow-500" : "text-red-500"}`}
+                className={`text-xl font-bold ${
+                  healthFactorNum >= 1.5
+                    ? "text-green-500"
+                    : healthFactorNum >= 1.1
+                    ? "text-yellow-500"
+                    : "text-red-500"
+                }`}
               >
-                {healthFactorDisplay.toFixed(2)}
+                {Number.isFinite(healthFactorNum) ? healthFactorNum.toFixed(2) : "∞"}
               </div>
             </div>
           </div>
@@ -328,20 +366,26 @@ export default function NewVaultPage() {
           <div className="text-sm">
             <div className="font-medium text-blue-500 mb-1">Importante</div>
             <p className="text-muted-foreground">
-              Al crear este vault, deberás aprobar el depósito de BTC y firmar la transacción. El colateral será
-              bloqueado hasta que pagues completamente la deuda o cierres el vault.
+              Al crear este vault, deberás aprobar el depósito de BTC y firmar la
+              transacción. El colateral será bloqueado hasta que pagues completamente
+              la deuda o cierres el vault.
             </p>
           </div>
         </div>
       </div>
     </div>
-  )
+  );
 
   return (
     <MainLayout>
       <div className="max-w-2xl mx-auto space-y-6">
         <div className="flex items-center gap-4">
-          <Button variant="ghost" size="sm" onClick={() => router.back()} className="gap-2">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => router.back()}
+            className="gap-2"
+          >
             <ArrowLeft className="h-4 w-4" />
             Volver
           </Button>
@@ -351,7 +395,7 @@ export default function NewVaultPage() {
           </div>
         </div>
 
-        {/* Progress Steps */}
+        {/* Steps */}
         <div className="flex items-center justify-center space-x-4 mb-8">
           {[1, 2, 3].map((step) => (
             <div key={step} className="flex items-center">
@@ -383,7 +427,7 @@ export default function NewVaultPage() {
           </CardContent>
         </Card>
 
-        {/* Navigation */}
+        {/* Nav */}
         <div className="flex justify-between">
           <Button
             variant="outline"
@@ -405,7 +449,11 @@ export default function NewVaultPage() {
               <ArrowRight className="h-4 w-4" />
             </Button>
           ) : (
-            <Button onClick={() => setShowTxModal(true)} disabled={!canCreate} className="gap-2">
+            <Button
+              onClick={() => setShowTxModal(true)}
+              disabled={!canCreate}
+              className="gap-2"
+            >
               Crear vault
               <ArrowRight className="h-4 w-4" />
             </Button>
@@ -421,5 +469,5 @@ export default function NewVaultPage() {
         />
       </div>
     </MainLayout>
-  )
+  );
 }

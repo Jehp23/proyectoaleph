@@ -4,7 +4,7 @@ import json
 from web3 import Web3
 
 CONFIG_PATH = Path(__file__).parent / "config.json"
-DEFAULTS_PATH = Path(__file__).parent / ".." / "frontend" / "onchain" / "addresses.json"
+DEFAULTS_PATH = Path(__file__).parent / ".." / "frontend" / "onchain" / "/abi" / "addresses.json"
 
 KEYS = ["loan", "usdtToken", "wethToken", "priceOracle", "network"]
 
