@@ -1,62 +1,134 @@
-"use client"
+"use client";
 
-import { useState, useEffect } from "react"
-import { MainLayout } from "@/components/layout/main-layout"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Separator } from "@/components/ui/separator"
-import { Settings, Code, Save, Globe, Palette, Sun, Moon } from "lucide-react"
-import { useToast } from "@/hooks/use-toast"
+import { useEffect, useState } from "react";
+import { MainLayout } from "@/components/layout/main-layout";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Separator } from "@/components/ui/separator";
+import { Settings, Code, Save, Palette, Sun, Moon } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+import { isAddress } from "viem";
+import { loadConfig, saveConfig, getPrice, type P2PConfig } from "@/lib/config-api";
 
 export default function SettingsPage() {
-  const { toast } = useToast()
+  const { toast } = useToast();
 
-  // Settings state
-  const [language, setLanguage] = useState("es")
-  const [theme, setTheme] = useState("dark")
-  const [vaultManagerAddress, setVaultManagerAddress] = useState("0x742d35Cc6634C0532925a3b8D4C9db96590b5c8e")
-  const [btcTokenAddress, setBtcTokenAddress] = useState("0xA0b86a33E6441b8dB4B2b8b8b8b8b8b8b8b8b8b8")
-  const [usdtTokenAddress, setUsdtTokenAddress] = useState("0xdAC17F958D2ee523a2206206994597C13D831ec7")
-  const [oracleAddress, setOracleAddress] = useState("0x5f4eC3Df9cbd43714FE2740f5E3616155c5b8419")
+  // UI (tema)
+  const [theme, setTheme] = useState<"light" | "dark">("dark");
 
-  // Theme initialization and persistence
+  // Config P2P + Oracle
+  const [cfg, setCfg] = useState<P2PConfig>({
+    network: "sepolia",
+    loan: "",
+    usdtToken: "",
+    wethToken: "",
+    priceOracle: "",
+  });
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [lastPrice, setLastPrice] = useState<string | null>(null);
+
+  // init tema
   useEffect(() => {
-    const savedTheme = localStorage.getItem("theme") || "dark"
-    setTheme(savedTheme)
-    document.documentElement.classList.toggle("dark", savedTheme === "dark")
-  }, [])
+    const saved = (localStorage.getItem("theme") as "light" | "dark") || "dark";
+    setTheme(saved);
+    document.documentElement.classList.toggle("dark", saved === "dark");
+  }, []);
 
-  // Theme change handler
-  const handleThemeChange = (newTheme: string) => {
-    setTheme(newTheme)
-    localStorage.setItem("theme", newTheme)
-    document.documentElement.classList.toggle("dark", newTheme === "dark")
+  // cargar config desde backend
+  useEffect(() => {
+    (async () => {
+      try {
+        const serverCfg = await loadConfig();
+        setCfg((c) => ({ ...c, ...serverCfg }));
+      } catch {
+        toast({ title: "No pude cargar la configuración", variant: "destructive" });
+      } finally {
+        setLoading(false);
+      }
+    })();
+  }, [toast]);
+
+  const handleThemeChange = (newTheme: "light" | "dark") => {
+    setTheme(newTheme);
+    localStorage.setItem("theme", newTheme);
+    document.documentElement.classList.toggle("dark", newTheme === "dark");
     toast({
       title: "Tema actualizado",
-      description: `Se ha cambiado al tema ${newTheme === "dark" ? "oscuro" : "claro"}.`,
-    })
-  }
+      description: `Se cambió al tema ${newTheme === "dark" ? "oscuro" : "claro"}.`,
+    });
+  };
 
-  const handleSaveContracts = () => {
-    // In a real app, this would save to localStorage or backend
-    toast({
-      title: "Configuración guardada",
-      description: "Las direcciones de contratos han sido actualizadas correctamente.",
-    })
-  }
+  const validate = () => {
+    if (!cfg.loan || !isAddress(cfg.loan)) {
+      toast({ title: "Dirección de préstamo inválida", variant: "destructive" });
+      return false;
+    }
+    if (!cfg.usdtToken || !isAddress(cfg.usdtToken)) {
+      toast({ title: "Dirección USDT inválida", variant: "destructive" });
+      return false;
+    }
+    if (!cfg.wethToken || !isAddress(cfg.wethToken)) {
+      toast({ title: "Dirección WETH inválida", variant: "destructive" });
+      return false;
+    }
+    if (cfg.priceOracle && !isAddress(cfg.priceOracle)) {
+      toast({ title: "Dirección de Oracle inválida", variant: "destructive" });
+      return false;
+    }
+    return true;
+  };
 
-  const handleResetToDefaults = () => {
-    setVaultManagerAddress("0x742d35Cc6634C0532925a3b8D4C9db96590b5c8e")
-    setBtcTokenAddress("0xA0b86a33E6441b8dB4B2b8b8b8b8b8b8b8b8b8b8")
-    setUsdtTokenAddress("0xdAC17F958D2ee523a2206206994597C13D831ec7")
-    setOracleAddress("0x5f4eC3Df9cbd43714FE2740f5E3616155c5b8419")
-    toast({
-      title: "Configuración restablecida",
-      description: "Se han restaurado los valores por defecto.",
-    })
+  const onSave = async () => {
+    if (!validate()) return;
+    setSaving(true);
+    try {
+      const saved = await saveConfig(cfg, process.env.NEXT_PUBLIC_ADMIN_TOKEN);
+      setCfg(saved);
+      toast({ title: "Configuración guardada", description: "Se actualizaron las direcciones." });
+    } catch (e: any) {
+      toast({ title: "Error guardando", description: e?.message ?? "", variant: "destructive" });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const onResetFromBackend = async () => {
+    setLoading(true);
+    try {
+      const serverCfg = await loadConfig();
+      setCfg(serverCfg);
+      toast({ title: "Restaurado", description: "Valores cargados desde backend." });
+    } catch {
+      toast({ title: "No pude cargar la configuración", variant: "destructive" });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const onTestOracle = async () => {
+    try {
+      const p = await getPrice();
+      const text = `${p.description ?? "Oracle"} = ${p.price ?? "?"}`;
+      setLastPrice(text);
+      toast({ title: "Oracle OK", description: text });
+    } catch (e: any) {
+      toast({ title: "No se pudo leer el oracle", description: e?.message ?? "", variant: "destructive" });
+    }
+  };
+
+  const chainName = cfg.network === "localhost" ? "Localhost (Hardhat)" : "Sepolia Testnet";
+  const chainId = cfg.network === "localhost" ? 31337 : 11155111;
+
+  if (loading) {
+    return (
+      <MainLayout>
+        <div className="max-w-2xl mx-auto">Cargando…</div>
+      </MainLayout>
+    );
   }
 
   return (
@@ -67,7 +139,7 @@ export default function SettingsPage() {
           <h1 className="text-3xl font-bold">Ajustes</h1>
         </div>
 
-        {/* General Settings */}
+        {/* General */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -76,53 +148,25 @@ export default function SettingsPage() {
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-6">
-            {/* Language Setting */}
             <div className="flex items-center justify-between">
               <div className="space-y-1">
-                <Label htmlFor="language-setting">Idioma</Label>
-                <p className="text-sm text-muted-foreground">Selecciona el idioma de la interfaz</p>
+                <Label>Tema</Label>
+                <p className="text-sm text-muted-foreground">Apariencia de la aplicación</p>
               </div>
               <div className="w-48">
-                <Select value={language} onValueChange={setLanguage}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="es">
-                      <div className="flex items-center gap-2">
-                        <Globe className="h-4 w-4" />
-                        Español
-                      </div>
-                    </SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-
-            <Separator />
-
-            {/* Theme Setting */}
-            <div className="flex items-center justify-between">
-              <div className="space-y-1">
-                <Label htmlFor="theme-setting">Tema</Label>
-                <p className="text-sm text-muted-foreground">Personaliza la apariencia de la aplicación</p>
-              </div>
-              <div className="w-48">
-                <Select value={theme} onValueChange={handleThemeChange}>
+                <Select value={theme} onValueChange={(v) => handleThemeChange(v as "light" | "dark")}>
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="light">
                       <div className="flex items-center gap-2">
-                        <Sun className="h-4 w-4" />
-                        Claro
+                        <Sun className="h-4 w-4" /> Claro
                       </div>
                     </SelectItem>
                     <SelectItem value="dark">
                       <div className="flex items-center gap-2">
-                        <Moon className="h-4 w-4" />
-                        Oscuro
+                        <Moon className="h-4 w-4" /> Oscuro
                       </div>
                     </SelectItem>
                   </SelectContent>
@@ -132,113 +176,108 @@ export default function SettingsPage() {
           </CardContent>
         </Card>
 
-        {/* Developer Settings */}
+        {/* Config P2P + Oracle */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Code className="h-5 w-5" />
-              Desarrolladores
+              Configuración P2P
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-6">
-            <div className="p-4 bg-yellow-500/10 border border-yellow-500/20 rounded-lg">
-              <div className="flex items-start gap-2">
-                <Code className="h-5 w-5 text-yellow-500 mt-0.5" />
-                <div className="text-sm">
-                  <div className="font-medium text-yellow-500 mb-1">Configuración avanzada</div>
-                  <p className="text-muted-foreground">
-                    Estas configuraciones son para desarrolladores. Cambiar estas direcciones puede afectar el
-                    funcionamiento de la aplicación.
-                  </p>
-                </div>
-              </div>
+            <div className="p-4 bg-yellow-500/10 border border-yellow-500/20 rounded-lg text-sm">
+              Cambiar estas direcciones afecta el funcionamiento. Usa direcciones válidas de tu red.
             </div>
 
-            {/* Contract Addresses */}
             <div className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="vault-manager">Dirección del VaultManager</Label>
+                <Label>Dirección del préstamo (P2PSecuredLoan)</Label>
                 <Input
-                  id="vault-manager"
-                  value={vaultManagerAddress}
-                  onChange={(e) => setVaultManagerAddress(e.target.value)}
+                  value={cfg.loan || ""}
+                  onChange={(e) => setCfg({ ...cfg, loan: e.target.value.trim() })}
                   placeholder="0x..."
                   className="font-mono text-sm"
                 />
-                <p className="text-xs text-muted-foreground">Contrato principal que gestiona los vaults de colateral</p>
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="btc-token">Dirección del token BTC</Label>
+                <Label>Dirección USDT (stable)</Label>
                 <Input
-                  id="btc-token"
-                  value={btcTokenAddress}
-                  onChange={(e) => setBtcTokenAddress(e.target.value)}
+                  value={cfg.usdtToken || ""}
+                  onChange={(e) => setCfg({ ...cfg, usdtToken: e.target.value.trim() })}
                   placeholder="0x..."
                   className="font-mono text-sm"
                 />
-                <p className="text-xs text-muted-foreground">Token ERC-20 que representa BTC (WBTC)</p>
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="usdt-token">Dirección del token USDT</Label>
+                <Label>Dirección WETH (colateral)</Label>
                 <Input
-                  id="usdt-token"
-                  value={usdtTokenAddress}
-                  onChange={(e) => setUsdtTokenAddress(e.target.value)}
+                  value={cfg.wethToken || ""}
+                  onChange={(e) => setCfg({ ...cfg, wethToken: e.target.value.trim() })}
                   placeholder="0x..."
                   className="font-mono text-sm"
                 />
-                <p className="text-xs text-muted-foreground">Token ERC-20 utilizado para los préstamos (USDT)</p>
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="oracle-address">Dirección del Oracle de precios</Label>
+                <Label>Dirección del Oracle (Chainlink)</Label>
                 <Input
-                  id="oracle-address"
-                  value={oracleAddress}
-                  onChange={(e) => setOracleAddress(e.target.value)}
+                  value={cfg.priceOracle || ""}
+                  onChange={(e) => setCfg({ ...cfg, priceOracle: e.target.value.trim() })}
                   placeholder="0x..."
                   className="font-mono text-sm"
                 />
-                <p className="text-xs text-muted-foreground">Oracle de Chainlink para el precio BTC/USD</p>
+                <p className="text-xs text-muted-foreground">AggregatorV3Interface del par (p. ej., ETH/USD).</p>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Red</Label>
+                <Select
+                  value={cfg.network || "sepolia"}
+                  onValueChange={(v) => setCfg({ ...cfg, network: v as "sepolia" | "localhost" })}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="sepolia">Sepolia</SelectItem>
+                    <SelectItem value="localhost">Localhost (Hardhat)</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
             </div>
 
             <Separator />
 
-            {/* Action Buttons */}
-            <div className="flex gap-3">
-              <Button onClick={handleSaveContracts} className="gap-2">
+            <div className="flex flex-wrap gap-3">
+              <Button onClick={onSave} disabled={saving} className="gap-2">
                 <Save className="h-4 w-4" />
-                Guardar configuración
+                {saving ? "Guardando..." : "Guardar configuración"}
               </Button>
-              <Button variant="outline" onClick={handleResetToDefaults} className="gap-2 bg-transparent">
-                Restablecer por defecto
+              <Button variant="outline" onClick={onResetFromBackend}>
+                Restablecer desde backend
               </Button>
+              <Button variant="outline" onClick={onTestOracle}>
+                Probar oracle
+              </Button>
+              {lastPrice && <div className="text-sm self-center">Último precio: {lastPrice}</div>}
             </div>
 
-            {/* Network Info */}
-            <div className="p-4 bg-muted rounded-lg">
-              <div className="text-sm space-y-2">
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Red:</span>
-                  <span className="font-medium">Sepolia Testnet</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Chain ID:</span>
-                  <span className="font-medium">11155111</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Estado:</span>
-                  <span className="font-medium text-green-500">Conectado</span>
-                </div>
+            <div className="p-4 bg-muted rounded-lg text-sm">
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Red:</span>
+                <span className="font-medium">{chainName}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Chain ID:</span>
+                <span className="font-medium">{chainId}</span>
               </div>
             </div>
           </CardContent>
         </Card>
 
-        {/* App Info */}
+        {/* App info */}
         <Card>
           <CardHeader>
             <CardTitle>Información de la aplicación</CardTitle>
@@ -254,16 +293,9 @@ export default function SettingsPage() {
                 <div className="font-medium">Agosto 2025</div>
               </div>
             </div>
-
-            <Separator />
-
-            <div className="text-center space-y-2">
-              <p className="text-sm text-muted-foreground">CautioLink - Caución cripto no-custodial</p>
-              <p className="text-xs text-muted-foreground">Construido con Next.js, Tailwind CSS y shadcn/ui | Hecho en V0</p>
-            </div>
           </CardContent>
         </Card>
       </div>
     </MainLayout>
-  )
+  );
 }

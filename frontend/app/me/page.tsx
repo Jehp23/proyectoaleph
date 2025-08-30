@@ -1,107 +1,185 @@
-"use client"
+"use client";
 
-import { useState } from "react"
-import { MainLayout } from "@/components/layout/main-layout"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
-import { KpiCard } from "@/components/ui/kpi-card"
-import { HealthBadge } from "@/components/ui/health-badge"
-import { Money } from "@/components/ui/money"
-import { EmptyState } from "@/components/ui/empty-state"
-import { TxModal } from "@/components/ui/tx-modal"
-import { LiquidationWarning } from "@/components/ui/liquidation-warning"
-import { useStore } from "@/lib/store"
-import { Wallet, Eye, Plus, Minus, Shield, PieChart, AlertTriangle } from "lucide-react"
-import Link from "next/link"
-import { PieChart as RechartsPieChart, Cell, ResponsiveContainer, Tooltip, Legend, Pie } from "recharts"
+import { useState, useMemo } from "react";
+import Link from "next/link";
+import { MainLayout } from "@/components/layout/main-layout";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { KpiCard } from "@/components/ui/kpi-card";
+import { HealthBadge } from "@/components/ui/health-badge";
+import { Money } from "@/components/ui/money";
+import { EmptyState } from "@/components/ui/empty-state";
+import { TxModal } from "@/components/ui/tx-modal";
+import { LiquidationWarning } from "@/components/ui/liquidation-warning";
+import { useStore } from "@/lib/store";
+import { useWallet } from "@/hooks/useWallet"; // <-- usa la cuenta real
+import {
+  Wallet,
+  Eye,
+  Plus,
+  Minus,
+  Shield,
+  PieChart as PieChartIcon,
+  AlertTriangle
+} from "lucide-react";
+import {
+  PieChart as RechartsPieChart,
+  Cell,
+  ResponsiveContainer,
+  Tooltip,
+  Legend,
+  Pie
+} from "recharts";
 
 const statusConfig = {
   Active: { label: "Activo", variant: "default" as const },
   Liquidated: { label: "Liquidado", variant: "destructive" as const },
   Closed: { label: "Cerrado", variant: "outline" as const },
-}
+};
 
 export default function MyVaultsPage() {
-  const { vaults, addCollateral, repayDebt, closeVault } = useStore()
-  const [showTxModal, setShowTxModal] = useState(false)
-  const [txAction, setTxAction] = useState<{ type: "addCollateral" | "repay" | "close"; vaultId: string } | null>(null)
+  const { vaults, addCollateral, repayDebt, closeVault } = useStore();
+  const { address, connect } = useWallet(); // <-- address de MetaMask (o null)
+  const [showTxModal, setShowTxModal] = useState(false);
+  const [txAction, setTxAction] = useState<
+    { type: "addCollateral" | "repay" | "close"; vaultId: string } | null
+  >(null);
 
-  const userVaults = vaults.filter((vault) => vault.owner === "0x1234...5678" || vault.owner === "0xYour...Address")
+  // Filtra por el owner = cuenta conectada
+  const userVaults = useMemo(() => {
+    if (!address) return [];
+    return vaults.filter(
+      (v) => v.owner?.toLowerCase() === address.toLowerCase()
+    );
+  }, [vaults, address]);
 
-  const totalCollateralBtc = userVaults.reduce((sum, vault) => sum + Number(vault.btcCollateral), 0)
-  const totalBorrowedUsdt = userVaults.reduce((sum, vault) => sum + Number(vault.usdtBorrowed), 0)
-  const activeVaults = userVaults.filter((vault) => vault.status === "Active")
-  const healthyVaults = userVaults.filter((vault) => vault.healthLevel === "Healthy")
-  const criticalVaults = userVaults.filter((vault) => vault.healthLevel === "Critical")
-  const avgLtv =
-    activeVaults.length > 0
-      ? Math.round(activeVaults.reduce((sum, vault) => sum + vault.ltv, 0) / activeVaults.length)
-      : 0
+  const activeVaults = useMemo(
+    () => userVaults.filter((v) => v.status === "Active"),
+    [userVaults]
+  );
 
-  const healthChartData = [
-    {
-      name: "Saludables",
-      value: userVaults.filter((vault) => vault.healthLevel === "Healthy").length,
-      fill: "hsl(var(--success))",
-    },
-    {
-      name: "Precaución",
-      value: userVaults.filter((vault) => vault.healthLevel === "Warning").length,
-      fill: "hsl(var(--warning))",
-    },
-    {
-      name: "Críticos",
-      value: userVaults.filter((vault) => vault.healthLevel === "Critical").length,
-      fill: "hsl(var(--danger))",
-    },
-  ].filter((item) => item.value > 0)
+  const totalCollateralBtc = useMemo(
+    () => userVaults.reduce((sum, v) => sum + Number(v.btcCollateral), 0),
+    [userVaults]
+  );
+  const totalBorrowedUsdt = useMemo(
+    () => userVaults.reduce((sum, v) => sum + Number(v.usdtBorrowed), 0),
+    [userVaults]
+  );
+  const healthyVaults = useMemo(
+    () => userVaults.filter((v) => v.healthLevel === "Healthy"),
+    [userVaults]
+  );
+  const criticalVaults = useMemo(
+    () => userVaults.filter((v) => v.healthLevel === "Critical"),
+    [userVaults]
+  );
+  const avgLtv = useMemo(() => {
+    return activeVaults.length > 0
+      ? Math.round(
+          activeVaults.reduce((sum, v) => sum + v.ltv, 0) / activeVaults.length
+        )
+      : 0;
+  }, [activeVaults]);
 
-  const vaultsNeedingAttention = activeVaults
-    .filter((vault) => vault.healthFactor < 1.2)
-    .sort((a, b) => a.healthFactor - b.healthFactor)
-    .slice(0, 3)
+  const healthChartData = useMemo(
+    () =>
+      [
+        {
+          name: "Saludables",
+          value: userVaults.filter((v) => v.healthLevel === "Healthy").length,
+          fill: "hsl(var(--success))",
+        },
+        {
+          name: "Precaución",
+          value: userVaults.filter((v) => v.healthLevel === "Warning").length,
+          fill: "hsl(var(--warning))",
+        },
+        {
+          name: "Críticos",
+          value: userVaults.filter((v) => v.healthLevel === "Critical").length,
+          fill: "hsl(var(--danger))",
+        },
+      ].filter((i) => i.value > 0),
+    [userVaults]
+  );
 
-  const handleAction = (type: "addCollateral" | "repay" | "close", vaultId: string) => {
-    setTxAction({ type, vaultId })
-    setShowTxModal(true)
-  }
+  const vaultsNeedingAttention = useMemo(
+    () =>
+      activeVaults
+        .filter((v) => v.healthFactor < 1.2)
+        .sort((a, b) => a.healthFactor - b.healthFactor)
+        .slice(0, 3),
+    [activeVaults]
+  );
+
+  const handleAction = (
+    type: "addCollateral" | "repay" | "close",
+    vaultId: string
+  ) => {
+    setTxAction({ type, vaultId });
+    setShowTxModal(true);
+  };
 
   const handleConfirmAction = async () => {
-    if (!txAction) return
-
-    // Simulate transaction
-    await new Promise((resolve) => setTimeout(resolve, 1000))
-
+    if (!txAction) return;
+    // Simula una tx (este store es mock)
+    await new Promise((r) => setTimeout(r, 1000));
     switch (txAction.type) {
       case "addCollateral":
-        addCollateral(txAction.vaultId, BigInt(10000000)) // Add 0.1 BTC
-        break
+        addCollateral(txAction.vaultId, BigInt(10_000_000)); // 0.1 BTC (8 dec)
+        break;
       case "repay":
-        repayDebt(txAction.vaultId, BigInt(10000000000)) // Repay 10000 USDT
-        break
+        repayDebt(txAction.vaultId, BigInt(10_000_000_00)); // 10,000 USDT (6 dec)
+        break;
       case "close":
-        closeVault(txAction.vaultId)
-        break
+        closeVault(txAction.vaultId);
+        break;
     }
-
-    setTxAction(null)
-  }
+    setTxAction(null);
+  };
 
   const getActionDescription = () => {
-    if (!txAction) return ""
+    if (!txAction) return "";
     switch (txAction.type) {
       case "addCollateral":
-        return "Agregar 0.1 BTC como colateral adicional"
+        return "Agregar 0.1 BTC como colateral adicional";
       case "repay":
-        return "Pagar 10,000 USDT de la deuda"
+        return "Pagar 10,000 USDT de la deuda";
       case "close":
-        return "Cerrar el vault y retirar todo el colateral"
+        return "Cerrar el vault y retirar todo el colateral";
       default:
-        return ""
+        return "";
     }
+  };
+
+  // Si no hay wallet conectada: CTA para conectar
+  if (!address) {
+    return (
+      <MainLayout>
+        <div className="space-y-6">
+          <div className="flex items-center gap-2">
+            <Wallet className="h-6 w-6 text-primary" />
+            <h1 className="text-3xl font-bold">Mis vaults</h1>
+          </div>
+          <EmptyState
+            icon={Shield}
+            title="Conecta tu wallet"
+            description="Necesitamos tu dirección para mostrar tus vaults."
+            action={
+              <Button className="gap-2" onClick={connect}>
+                <Wallet className="h-4 w-4" />
+                Conectar wallet
+              </Button>
+            }
+          />
+        </div>
+      </MainLayout>
+    );
   }
 
+  // Conectado pero sin vaults
   if (userVaults.length === 0) {
     return (
       <MainLayout>
@@ -110,11 +188,10 @@ export default function MyVaultsPage() {
             <Wallet className="h-6 w-6 text-primary" />
             <h1 className="text-3xl font-bold">Mis vaults</h1>
           </div>
-
           <EmptyState
             icon={Shield}
             title="No tienes vaults creados"
-            description="Crea tu primer vault depositando BTC como colateral para tomar préstamos en USDT"
+            description="Crea tu primer vault depositando BTC como colateral para tomar préstamos en USDT."
             action={
               <Link href="/new">
                 <Button className="gap-2">
@@ -126,7 +203,7 @@ export default function MyVaultsPage() {
           />
         </div>
       </MainLayout>
-    )
+    );
   }
 
   return (
@@ -140,13 +217,25 @@ export default function MyVaultsPage() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           <KpiCard
             title="Colateral total"
-            value={<Money amount={BigInt(totalCollateralBtc)} currency="BTC" showCurrency={false} />}
+            value={
+              <Money
+                amount={BigInt(totalCollateralBtc)}
+                currency="BTC"
+                showCurrency={false}
+              />
+            }
             subtitle="BTC depositado"
             trend="up"
           />
           <KpiCard
             title="Total prestado"
-            value={<Money amount={BigInt(totalBorrowedUsdt)} currency="USDT" showCurrency={false} />}
+            value={
+              <Money
+                amount={BigInt(totalBorrowedUsdt)}
+                currency="USDT"
+                showCurrency={false}
+              />
+            }
             subtitle="USDT tomados"
             trend="neutral"
           />
@@ -172,12 +261,12 @@ export default function MyVaultsPage() {
                   <AlertTriangle className="h-5 w-5" />
                   Vaults en riesgo crítico
                 </h2>
-                {criticalVaults.map((vault) => (
+                {criticalVaults.map((v) => (
                   <LiquidationWarning
-                    key={vault.id}
-                    vault={vault}
-                    onAddCollateral={() => handleAction("addCollateral", vault.id)}
-                    onRepayDebt={() => handleAction("repay", vault.id)}
+                    key={v.id}
+                    vault={v}
+                    onAddCollateral={() => handleAction("addCollateral", v.id)}
+                    onRepayDebt={() => handleAction("repay", v.id)}
                   />
                 ))}
               </div>
@@ -189,56 +278,69 @@ export default function MyVaultsPage() {
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  {userVaults.map((vault) => {
-                    const statusInfo = statusConfig[vault.status]
-                    const btcAmount = Number(vault.btcCollateral) / 100000000
-                    const usdtAmount = Number(vault.usdtBorrowed) / 1000000
+                  {userVaults.map((v) => {
+                    const statusInfo = statusConfig[v.status];
+                    const usdtAmount = Number(v.usdtBorrowed) / 1_000_000;
 
                     return (
-                      <Card key={vault.id}>
+                      <Card key={v.id}>
                         <CardContent className="p-4">
                           <div className="flex items-center justify-between">
                             <div className="flex items-center gap-4">
                               <div>
                                 <div className="font-semibold font-mono">
-                                  <Money amount={vault.btcCollateral} currency="BTC" />
+                                  <Money amount={v.btcCollateral} currency="BTC" />
                                 </div>
                                 <div className="text-sm text-muted-foreground">
-                                  {vault.ltv}% LTV • <Money amount={vault.usdtBorrowed} currency="USDT" />
+                                  {v.ltv}% LTV •{" "}
+                                  <Money amount={v.usdtBorrowed} currency="USDT" />
                                 </div>
                               </div>
-                              <HealthBadge level={vault.healthLevel} healthFactor={vault.healthFactor} />
-                              <Badge variant={statusInfo.variant}>{statusInfo.label}</Badge>
+                              <HealthBadge
+                                level={v.healthLevel}
+                                healthFactor={v.healthFactor}
+                              />
+                              <Badge variant={statusInfo.variant}>
+                                {statusInfo.label}
+                              </Badge>
                             </div>
                             <div className="flex items-center gap-2">
-                              <Link href={`/vaults/${vault.id}`}>
-                                <Button variant="outline" size="sm" className="gap-2 bg-transparent">
+                              <Link href={`/vaults/${v.id}`}>
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  className="gap-2 bg-transparent"
+                                >
                                   <Eye className="h-4 w-4" />
                                   Ver
                                 </Button>
                               </Link>
-                              {vault.status === "Active" && (
+                              {v.status === "Active" && (
                                 <>
                                   <Button
                                     variant="outline"
                                     size="sm"
-                                    onClick={() => handleAction("addCollateral", vault.id)}
+                                    onClick={() => handleAction("addCollateral", v.id)}
                                     className="gap-2 bg-transparent"
                                   >
                                     <Plus className="h-4 w-4" />
                                     BTC
                                   </Button>
-                                  <Button size="sm" onClick={() => handleAction("repay", vault.id)} className="gap-2">
+                                  <Button
+                                    size="sm"
+                                    onClick={() => handleAction("repay", v.id)}
+                                    className="gap-2"
+                                  >
                                     <Minus className="h-4 w-4" />
                                     Pagar
                                   </Button>
                                 </>
                               )}
-                              {vault.status === "Active" && usdtAmount === 0 && (
+                              {v.status === "Active" && usdtAmount === 0 && (
                                 <Button
                                   variant="outline"
                                   size="sm"
-                                  onClick={() => handleAction("close", vault.id)}
+                                  onClick={() => handleAction("close", v.id)}
                                   className="gap-2 bg-transparent"
                                 >
                                   Cerrar
@@ -248,7 +350,7 @@ export default function MyVaultsPage() {
                           </div>
                         </CardContent>
                       </Card>
-                    )
+                    );
                   })}
                 </div>
               </CardContent>
@@ -266,16 +368,18 @@ export default function MyVaultsPage() {
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-3">
-                    {vaultsNeedingAttention.map((vault) => (
+                    {vaultsNeedingAttention.map((v) => (
                       <div
-                        key={vault.id}
+                        key={v.id}
                         className="flex justify-between items-center p-3 bg-yellow-500/10 rounded-lg border border-yellow-500/20"
                       >
                         <div>
-                          <div className="font-medium">Vault #{vault.id}</div>
-                          <div className="text-sm text-muted-foreground">Factor: {vault.healthFactor.toFixed(2)}</div>
+                          <div className="font-medium">Vault #{v.id}</div>
+                          <div className="text-sm text-muted-foreground">
+                            Factor: {v.healthFactor.toFixed(2)}
+                          </div>
                         </div>
-                        <Link href={`/vaults/${vault.id}`}>
+                        <Link href={`/vaults/${v.id}`}>
                           <Button variant="outline" size="sm" className="bg-transparent">
                             Ver
                           </Button>
@@ -287,7 +391,6 @@ export default function MyVaultsPage() {
               </Card>
             )}
 
-            {/* Quick Actions */}
             <Card>
               <CardHeader>
                 <CardTitle>Acciones rápidas</CardTitle>
@@ -312,7 +415,7 @@ export default function MyVaultsPage() {
               <Card>
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
-                    <PieChart className="h-5 w-5" />
+                    <PieChartIcon className="h-5 w-5" />
                     Salud de vaults
                   </CardTitle>
                 </CardHeader>
@@ -329,8 +432,8 @@ export default function MyVaultsPage() {
                           paddingAngle={5}
                           dataKey="value"
                         >
-                          {healthChartData.map((entry, index) => (
-                            <Cell key={`cell-${index}`} fill={entry.fill} />
+                          {healthChartData.map((entry, idx) => (
+                            <Cell key={`cell-${idx}`} fill={entry.fill} />
                           ))}
                         </Pie>
                         <Tooltip />
@@ -353,5 +456,5 @@ export default function MyVaultsPage() {
         />
       </div>
     </MainLayout>
-  )
+  );
 }
