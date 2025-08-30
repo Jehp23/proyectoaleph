@@ -14,19 +14,22 @@ import { ArrowLeft, ArrowRight, HelpCircle, Shield, Bitcoin } from "lucide-react
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { useRouter } from "next/navigation"
 import { btcToWei, musdToWei, weiToBtc, weiToMusd, formatBtc, formatMusd, formatUsd } from "@/lib/units"
-import { calculateHealthFactor, calculateLiquidationPrice } from "@/lib/math"
 import {
-  LIQUIDATION_THRESHOLD_PERCENT,
-  ANNUAL_INTEREST_RATE,
-  HEALTH_FACTOR_MIN,
-  HEALTH_FACTOR_HEALTHY,
-  HEALTH_FACTOR_WARNING,
-  HEALTH_FACTOR_INFINITE,
-  LTV_DEFAULT,
-} from "@/lib/risk-params"
+  calcLtv,
+  calcHf,
+  calcLiqPrice,
+  resolveLt,
+  resolveLtvMax,
+  simpleInterest,
+  hfBadge,
+  HF_WITHDRAW_MIN,
+} from "@/lib/math"
+import { useProtocol } from "@/hooks/useProtocol"
+import { LIQUIDATION_THRESHOLD_PERCENT, ANNUAL_INTEREST_RATE, LTV_DEFAULT } from "@/lib/risk-params"
 
 export default function NewVaultPage() {
   const { createVault, btcPrice } = useStore()
+  const { data: proto } = useProtocol()
   const router = useRouter()
   const [currentStep, setCurrentStep] = useState(1)
   const [showTxModal, setShowTxModal] = useState(false)
@@ -36,6 +39,10 @@ export default function NewVaultPage() {
   const [ltv, setLtv] = useState(LTV_DEFAULT) // Default 50% LTV
   const [interestRate] = useState(ANNUAL_INTEREST_RATE) // Fixed 8.5% annual interest rate
   const [liquidationThreshold] = useState(LIQUIDATION_THRESHOLD_PERCENT) // Fixed 70% liquidation threshold
+
+  const lt = resolveLt(proto?.liqThresholdBps) // 0..1
+  const ltvMax = resolveLtvMax(proto?.ltvMaxBps) // 0..1
+  const priceUsd = proto?.priceUsd ?? btcPrice
 
   const safeParseBtcAmount = (amount: string): bigint => {
     if (!amount || amount.trim() === "" || !/^\d+(\.\d+)?$/.test(amount.trim())) {
@@ -51,28 +58,20 @@ export default function NewVaultPage() {
   const btcCollateralWei = safeParseBtcAmount(btcAmount)
   const btcCollateralHuman = weiToBtc(btcCollateralWei)
 
-  // Calculate collateral value in USD (human-readable)
-  const collateralValueUsd = btcCollateralHuman * btcPrice
-
-  // Calculate borrow amount based on LTV (human-readable)
+  const collateralValueUsd = btcCollateralHuman * priceUsd
   const borrowAmountUsd = collateralValueUsd * (ltv / 100)
   const borrowAmountMusdWei = musdToWei(borrowAmountUsd)
   const borrowAmountHuman = weiToMusd(borrowAmountMusdWei)
 
-  const healthFactorValue =
-    btcCollateralHuman > 0 && borrowAmountHuman > 0
-      ? calculateHealthFactor(btcCollateralHuman, borrowAmountHuman, btcPrice, liquidationThreshold / 100)
-      : btcCollateralHuman > 0
-        ? HEALTH_FACTOR_INFINITE
-        : 0
-
-  const liquidationPriceValue =
-    btcCollateralHuman > 0 && borrowAmountHuman > 0
-      ? calculateLiquidationPrice(btcCollateralHuman, borrowAmountHuman, liquidationThreshold / 100)
-      : 0
+  const ltvValue = calcLtv(borrowAmountUsd, btcCollateralHuman, priceUsd)
+  const healthFactorValue = calcHf(borrowAmountUsd, btcCollateralHuman, priceUsd, lt)
+  const liquidationPriceValue = calcLiqPrice(borrowAmountUsd, btcCollateralHuman, lt)
+  const estInteres90d = simpleInterest(borrowAmountUsd, proto?.aprBps ?? 1200, 90)
+  const badge = hfBadge(healthFactorValue)
 
   const canProceedStep1 = btcAmount && btcCollateralWei > 0
-  const canProceedStep2 = borrowAmountHuman > 0 && healthFactorValue > HEALTH_FACTOR_MIN
+  const canBorrow = ltvValue <= ltvMax && priceUsd > 0
+  const canProceedStep2 = borrowAmountHuman > 0 && healthFactorValue > HF_WITHDRAW_MIN && canBorrow
   const canCreate = canProceedStep1 && canProceedStep2
 
   const handleCreateVault = async () => {
@@ -140,7 +139,7 @@ export default function NewVaultPage() {
               </div>
               <div>
                 <span className="text-muted-foreground">Precio BTC:</span>
-                <div className="font-medium font-mono">{formatUsd(btcPrice)}</div>
+                <div className="font-medium font-mono">{formatUsd(priceUsd)}</div>
               </div>
             </div>
           </CardContent>
@@ -160,7 +159,7 @@ export default function NewVaultPage() {
         <LtvSlider
           value={ltv}
           onChange={setLtv}
-          maxLtv={liquidationThreshold - 5} // 5% buffer from liquidation
+          maxLtv={ltvMax * 100} // Convert to percentage
         />
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -175,9 +174,11 @@ export default function NewVaultPage() {
             <CardContent className="p-4">
               <div className="text-sm text-muted-foreground mb-1">Factor de salud</div>
               <div
-                className={`text-xl font-bold ${healthFactorValue >= HEALTH_FACTOR_HEALTHY ? "text-green-500" : healthFactorValue >= HEALTH_FACTOR_WARNING ? "text-yellow-500" : "text-red-500"}`}
+                className={`text-xl font-bold ${
+                  badge === "safe" ? "text-green-500" : badge === "warn" ? "text-yellow-500" : "text-red-500"
+                }`}
               >
-                {healthFactorValue >= HEALTH_FACTOR_INFINITE ? "∞" : healthFactorValue.toFixed(2)}
+                {healthFactorValue === Number.POSITIVE_INFINITY ? "∞" : healthFactorValue.toFixed(2)}
               </div>
             </CardContent>
           </Card>
@@ -207,12 +208,23 @@ export default function NewVaultPage() {
             </div>
             <div>
               <div className="text-sm text-muted-foreground">Umbral de liquidación</div>
-              <div className="font-semibold">{liquidationThreshold}%</div>
+              <div className="font-semibold">{(lt * 100).toFixed(0)}%</div>
             </div>
           </div>
+
+          {estInteres90d > 0 && (
+            <div className="p-3 bg-blue-500/10 border border-blue-500/20 rounded-lg">
+              <div className="text-sm">
+                <div className="font-medium text-blue-500 mb-1">Interés estimado (90 días)</div>
+                <p className="text-muted-foreground">
+                  Aproximadamente <span className="font-medium">{formatUsd(estInteres90d)}</span> en intereses
+                </p>
+              </div>
+            </div>
+          )}
         </div>
 
-        {liquidationPriceValue > 0 && (
+        {liquidationPriceValue > 0 && liquidationPriceValue !== Number.POSITIVE_INFINITY && (
           <div className="p-4 bg-yellow-500/10 border border-yellow-500/20 rounded-lg">
             <div className="flex items-start gap-2">
               <HelpCircle className="h-5 w-5 text-yellow-500 mt-0.5" />
@@ -221,6 +233,21 @@ export default function NewVaultPage() {
                 <p className="text-muted-foreground">
                   Tu vault será liquidado si BTC cae por debajo de{" "}
                   <span className="font-medium">{formatUsd(liquidationPriceValue)}</span>
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {!canBorrow && ltvValue > ltvMax && (
+          <div className="p-4 bg-red-500/10 border border-red-500/20 rounded-lg">
+            <div className="flex items-start gap-2">
+              <HelpCircle className="h-5 w-5 text-red-500 mt-0.5" />
+              <div className="text-sm">
+                <div className="font-medium text-red-500 mb-1">LTV demasiado alto</div>
+                <p className="text-muted-foreground">
+                  El LTV máximo permitido es {(ltvMax * 100).toFixed(0)}%. Reduce la cantidad a prestar o aumenta el
+                  colateral.
                 </p>
               </div>
             </div>
@@ -266,9 +293,11 @@ export default function NewVaultPage() {
             <div>
               <div className="text-sm text-muted-foreground">Factor de salud</div>
               <div
-                className={`text-xl font-bold ${healthFactorValue >= HEALTH_FACTOR_HEALTHY ? "text-green-500" : healthFactorValue >= HEALTH_FACTOR_WARNING ? "text-yellow-500" : "text-red-500"}`}
+                className={`text-xl font-bold ${
+                  badge === "safe" ? "text-green-500" : badge === "warn" ? "text-yellow-500" : "text-red-500"
+                }`}
               >
-                {healthFactorValue >= HEALTH_FACTOR_INFINITE ? "∞" : healthFactorValue.toFixed(2)}
+                {healthFactorValue === Number.POSITIVE_INFINITY ? "∞" : healthFactorValue.toFixed(2)}
               </div>
             </div>
           </div>
@@ -278,7 +307,7 @@ export default function NewVaultPage() {
           <div className="space-y-2">
             <div className="flex justify-between text-sm">
               <span className="text-muted-foreground">LTV:</span>
-              <span className="font-medium">{ltv}%</span>
+              <span className="font-medium">{(ltvValue * 100).toFixed(1)}%</span>
             </div>
             <div className="flex justify-between text-sm">
               <span className="text-muted-foreground">Tasa de interés:</span>
@@ -286,11 +315,13 @@ export default function NewVaultPage() {
             </div>
             <div className="flex justify-between text-sm">
               <span className="text-muted-foreground">Umbral de liquidación:</span>
-              <span className="font-medium">{liquidationThreshold}%</span>
+              <span className="font-medium">{(lt * 100).toFixed(0)}%</span>
             </div>
             <div className="flex justify-between text-sm">
               <span className="text-muted-foreground">Precio de liquidación:</span>
-              <span className="font-medium">{formatUsd(liquidationPriceValue)}</span>
+              <span className="font-medium">
+                {liquidationPriceValue === Number.POSITIVE_INFINITY ? "N/A" : formatUsd(liquidationPriceValue)}
+              </span>
             </div>
           </div>
         </CardContent>
