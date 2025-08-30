@@ -19,7 +19,7 @@ import { useRouter } from "next/navigation"
 import { btcToWei, musdToWei, weiToBtc, weiToMusd, formatBtc, formatMusd, formatUsd } from "@/lib/units"
 import { calcLtv, calcHf, calcLiqPrice, resolveLt, resolveLtvMax, simpleInterest, hfBadge } from "@/lib/math"
 import { useProtocol } from "@/hooks/useProtocol"
-import { LIQUIDATION_THRESHOLD_PERCENT, ANNUAL_INTEREST_RATE, LTV_DEFAULT } from "@/lib/risk-params"
+import { LTV_DEFAULT } from "@/lib/risk-params"
 
 export default function NewVaultPage() {
   const { createVault, btcPrice } = useStore()
@@ -31,12 +31,12 @@ export default function NewVaultPage() {
 
   const [btcAmount, setBtcAmount] = useState("")
   const [ltv, setLtv] = useState(LTV_DEFAULT) // Default 50% LTV
-  const [interestRate] = useState(ANNUAL_INTEREST_RATE) // Fixed 8.5% annual interest rate
-  const [liquidationThreshold] = useState(LIQUIDATION_THRESHOLD_PERCENT) // Fixed 70% liquidation threshold
 
   const lt = resolveLt(proto?.liqThresholdBps) // 0..1
   const ltvMax = resolveLtvMax(proto?.ltvMaxBps) // 0..1
   const priceUsd = proto?.priceUsd ?? btcPrice
+  const aprBps = proto?.aprBps ?? 1200
+  const liqBonusBps = proto?.liqBonusBps ?? 1000
 
   const safeParseBtcAmount = (amount: string): bigint => {
     if (!amount || amount.trim() === "" || !/^\d+(\.\d+)?$/.test(amount.trim())) {
@@ -60,7 +60,7 @@ export default function NewVaultPage() {
   const ltvValue = calcLtv(borrowAmountUsd, btcCollateralHuman, priceUsd)
   const healthFactorValue = calcHf(borrowAmountUsd, btcCollateralHuman, priceUsd, lt)
   const liquidationPriceValue = calcLiqPrice(borrowAmountUsd, btcCollateralHuman, lt)
-  const estInteres90d = simpleInterest(borrowAmountUsd, proto?.aprBps ?? 1200, 90)
+  const estInteres90d = simpleInterest(borrowAmountUsd, aprBps, 90)
   const badge = hfBadge(healthFactorValue)
 
   const borrowGuard = canBorrow({
@@ -88,10 +88,10 @@ export default function NewVaultPage() {
       btcCollateral: btcCollateralWei,
       usdtBorrowed: borrowAmountMusdWei,
       ltv,
-      liquidationThreshold,
+      liquidationThreshold: lt * 100, // Convert to percentage for storage
       status: "Active",
       btcPrice,
-      interestRate,
+      interestRate: aprBps / 100, // Convert BPS to percentage
     })
 
     router.push("/me")
@@ -196,18 +196,46 @@ export default function NewVaultPage() {
                   <HelpCircle className="h-4 w-4 text-muted-foreground" />
                 </TooltipTrigger>
                 <TooltipContent>
-                  <p className="max-w-xs">
-                    Estos parámetros están fijados por el protocolo para garantizar la seguridad del sistema.
-                  </p>
+                  <p className="max-w-xs">Estos parámetros están leídos directamente del contrato inteligente.</p>
                 </TooltipContent>
               </Tooltip>
             </TooltipProvider>
           </div>
 
+          <div className="rounded border p-3 text-sm bg-muted/50">
+            <div className="font-medium mb-2">Parámetros del protocolo (on-chain):</div>
+            <ul className="space-y-1 text-xs">
+              <li className="flex justify-between">
+                <span>LTV máximo:</span>
+                <span className="font-mono">
+                  {(ltvMax * 100).toFixed(0)}% (BPS: {proto?.ltvMaxBps ?? "—"})
+                </span>
+              </li>
+              <li className="flex justify-between">
+                <span>Umbral de liquidación:</span>
+                <span className="font-mono">
+                  {(lt * 100).toFixed(0)}% (BPS: {proto?.liqThresholdBps ?? "—"})
+                </span>
+              </li>
+              <li className="flex justify-between">
+                <span>Bonus de liquidación:</span>
+                <span className="font-mono">
+                  {(liqBonusBps / 100).toFixed(2)}% (BPS: {proto?.liqBonusBps ?? "—"})
+                </span>
+              </li>
+              <li className="flex justify-between">
+                <span>APR:</span>
+                <span className="font-mono">
+                  {(aprBps / 100).toFixed(2)}% (BPS: {proto?.aprBps ?? "—"})
+                </span>
+              </li>
+            </ul>
+          </div>
+
           <div className="grid grid-cols-2 gap-4 p-4 bg-muted rounded-lg">
             <div>
               <div className="text-sm text-muted-foreground">Tasa de interés</div>
-              <div className="font-semibold">{interestRate}% anual</div>
+              <div className="font-semibold">{(aprBps / 100).toFixed(2)}% anual</div>
             </div>
             <div>
               <div className="text-sm text-muted-foreground">Umbral de liquidación</div>
@@ -311,7 +339,7 @@ export default function NewVaultPage() {
             </div>
             <div className="flex justify-between text-sm">
               <span className="text-muted-foreground">Tasa de interés:</span>
-              <span className="font-medium">{interestRate}% anual</span>
+              <span className="font-medium">{(aprBps / 100).toFixed(2)}% anual</span>
             </div>
             <div className="flex justify-between text-sm">
               <span className="text-muted-foreground">Umbral de liquidación:</span>

@@ -33,11 +33,30 @@ export async function readPriceUsd(): Promise<number | null> {
   }
 }
 
+async function readProtocolByVars(addr: `0x${string}`): Promise<Partial<ProtocolData>> {
+  const calls = await publicClient.multicall({
+    allowFailure: true,
+    contracts: [
+      { address: addr, abi: ABIS.vaultManager, functionName: "LTV_MAX_BPS" },
+      { address: addr, abi: ABIS.vaultManager, functionName: "LIQ_THRESHOLD_BPS" },
+      { address: addr, abi: ABIS.vaultManager, functionName: "LIQ_BONUS_BPS" },
+      { address: addr, abi: ABIS.vaultManager, functionName: "APR_BPS" },
+    ],
+  })
+  return {
+    ltvMaxBps: Number(calls[0].status === "success" ? calls[0].result : 6000),
+    liqThresholdBps: Number(calls[1].status === "success" ? calls[1].result : 7000),
+    liqBonusBps: Number(calls[2].status === "success" ? calls[2].result : 1000),
+    aprBps: Number(calls[3].status === "success" ? calls[3].result : 1200),
+  }
+}
+
 export async function readProtocolData(): Promise<ProtocolData | null> {
   const addrs = loadAddresses()
   if (!addrs) return null
 
-  // Try getProtocolData() first
+  let protocolParams: Partial<ProtocolData>
+
   try {
     const data = (await publicClient.readContract({
       address: addrs.VAULT_MANAGER,
@@ -46,25 +65,26 @@ export async function readProtocolData(): Promise<ProtocolData | null> {
       args: [],
     })) as any
 
-    const priceUsd = (data.wbtcPrice ? fromPriceE8(BigInt(data.wbtcPrice)) : await readPriceUsd()) ?? null
-
-    return {
-      ltvMaxBps: Number(data.ltvMaxBps ?? 6000),
-      liqThresholdBps: Number(data.liqThresholdBps ?? 7000),
-      liqBonusBps: Number(data.liqBonusBps ?? 1000),
-      aprBps: Number(data.aprBps ?? 1200),
-      priceUsd: priceUsd ?? undefined,
+    protocolParams = {
+      ltvMaxBps: Number(data.ltvMaxBps ?? data.LTV_MAX_BPS),
+      liqThresholdBps: Number(data.liqThresholdBps ?? data.LIQ_THRESHOLD_BPS),
+      liqBonusBps: Number(data.liqBonusBps ?? data.LIQ_BONUS_BPS),
+      aprBps: Number(data.aprBps ?? data.APR_BPS),
     }
   } catch {
-    // Fallback to defaults + price
-    const priceUsd = (await readPriceUsd()) ?? undefined
-    return {
-      ltvMaxBps: 6000,
-      liqThresholdBps: 7000,
-      liqBonusBps: 1000,
-      aprBps: 1200,
-      priceUsd,
-    }
+    // Fallback to individual variable reads
+    protocolParams = await readProtocolByVars(addrs.VAULT_MANAGER)
+  }
+
+  // Read price separately
+  const priceUsd = (await readPriceUsd()) ?? undefined
+
+  return {
+    ltvMaxBps: protocolParams.ltvMaxBps ?? 6000,
+    liqThresholdBps: protocolParams.liqThresholdBps ?? 7000,
+    liqBonusBps: protocolParams.liqBonusBps ?? 1000,
+    aprBps: protocolParams.aprBps ?? 1200,
+    priceUsd,
   }
 }
 
