@@ -90,7 +90,7 @@
     "typechain": "latest",
     "use-sync-external-store": "latest",
     "vaul": "^0.9.9",
-    "viem": "^2.17.0",
+    "viem": "latest",
     "wagmi": "latest",
     "zod": "3.25.67",
     "zustand": "latest"
