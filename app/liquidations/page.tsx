@@ -7,20 +7,47 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Money } from "@/components/ui/money"
 import { HealthBadge } from "@/components/ui/health-badge"
-import { useStore } from "@/lib/store"
+import { useProtocol } from "@/hooks/useProtocol"
 import { useOracleAdmin } from "@/hooks/useOracleAdmin"
 import { Zap, AlertTriangle, TrendingDown, Clock, Info, Play, BarChart3, Settings } from "lucide-react"
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine } from "recharts"
 
 export default function LiquidationsPage() {
-  const { vaults, updateBtcPrice, btcPrice } = useStore()
+  const { data: protocol, isLoading } = useProtocol()
   const [isSimulating, setIsSimulating] = useState(false)
-  const [simulationPrice, setSimulationPrice] = useState(btcPrice)
+  const [simulationPrice, setSimulationPrice] = useState(protocol?.priceUsd || 45000)
 
   const { isOwner, oracleOwner, priceUsd, drop10, drop20, resetTo, busy, error } = useOracleAdmin()
 
-  const liquidatedVaults = vaults.filter((vault) => vault.status === "Liquidated")
-  const criticalVaults = vaults.filter((vault) => vault.status === "Active" && vault.healthLevel === "Critical")
+  const mockVaults = [
+    {
+      id: "1",
+      btcCollateral: "150000000", // 1.5 BTC
+      usdtBorrowed: "45000000000", // 45,000 USDT
+      status: "Active",
+      healthLevel: "Critical" as const,
+      healthFactor: 1.05,
+      ltv: 72,
+      liquidationThreshold: 75,
+      liquidatedAt: new Date("2024-01-15"),
+    },
+    {
+      id: "2",
+      btcCollateral: "100000000", // 1 BTC
+      usdtBorrowed: "35000000000", // 35,000 USDT
+      status: "Liquidated",
+      healthLevel: "Critical" as const,
+      healthFactor: 0.85,
+      ltv: 85,
+      liquidationThreshold: 75,
+      liquidatedAt: new Date("2024-01-14"),
+    },
+  ]
+
+  const liquidatedVaults = mockVaults.filter((vault) => vault.status === "Liquidated")
+  const criticalVaults = mockVaults.filter((vault) => vault.status === "Active" && vault.healthLevel === "Critical")
+
+  const currentBtcPrice = protocol?.priceUsd || priceUsd || 45000
 
   // Mock price history data for demonstration
   const priceHistory = [
@@ -30,7 +57,7 @@ export default function LiquidationsPage() {
     { time: "12:00", price: 43200, liquidations: 2 },
     { time: "16:00", price: 42500, liquidations: 1 },
     { time: "20:00", price: 43100, liquidations: 0 },
-    { time: "24:00", price: btcPrice, liquidations: 0 },
+    { time: "24:00", price: currentBtcPrice, liquidations: 0 },
   ]
 
   const handlePriceSimulation = async (targetPrice: number) => {
@@ -39,20 +66,29 @@ export default function LiquidationsPage() {
 
     // Simulate gradual price change
     const steps = 20
-    const priceStep = (targetPrice - btcPrice) / steps
+    const priceStep = (targetPrice - currentBtcPrice) / steps
 
     for (let i = 1; i <= steps; i++) {
       await new Promise((resolve) => setTimeout(resolve, 100))
-      const newPrice = btcPrice + priceStep * i
-      updateBtcPrice(newPrice)
+      const newPrice = currentBtcPrice + priceStep * i
+      setSimulationPrice(newPrice)
     }
 
     setIsSimulating(false)
   }
 
   const resetPrice = () => {
-    updateBtcPrice(45000)
     setSimulationPrice(45000)
+  }
+
+  if (isLoading) {
+    return (
+      <MainLayout>
+        <div className="flex items-center justify-center h-64">
+          <div className="animate-spin h-8 w-8 border-2 border-primary border-t-transparent rounded-full" />
+        </div>
+      </MainLayout>
+    )
   }
 
   return (
@@ -142,7 +178,9 @@ export default function LiquidationsPage() {
               <div className="p-4 bg-background rounded-lg border">
                 <div className="font-semibold mb-2">1. Umbral de liquidación</div>
                 <p className="text-sm text-muted-foreground">
-                  Cuando el LTV supera el 75%, el vault entra en zona de liquidación
+                  Cuando el LTV supera el{" "}
+                  {protocol?.liquidationThreshold ? Math.round(protocol.liquidationThreshold * 100) : 70}%, el vault
+                  entra en zona de liquidación
                 </p>
               </div>
               <div className="p-4 bg-background rounded-lg border">
@@ -174,7 +212,7 @@ export default function LiquidationsPage() {
               <div>
                 <div className="text-sm text-muted-foreground">Precio actual de BTC</div>
                 <div className="text-2xl font-bold font-mono">
-                  <Money amount={btcPrice} currency="USD" />
+                  <Money amount={currentBtcPrice} currency="USD" />
                 </div>
               </div>
               <div className="flex gap-2">
@@ -344,7 +382,7 @@ export default function LiquidationsPage() {
                         </div>
                         <div className="mt-2 text-xs text-yellow-600">
                           Riesgo de liquidación si BTC cae{" "}
-                          {(((btcPrice - liquidationPrice) / btcPrice) * 100).toFixed(1)}% más
+                          {(((currentBtcPrice - liquidationPrice) / currentBtcPrice) * 100).toFixed(1)}% más
                         </div>
                       </div>
                     )
@@ -381,7 +419,9 @@ export default function LiquidationsPage() {
                 <div className="text-sm text-muted-foreground">BTC liquidado</div>
               </div>
               <div className="text-center">
-                <div className="text-2xl font-bold">75%</div>
+                <div className="text-2xl font-bold">
+                  {protocol?.liquidationThreshold ? Math.round(protocol.liquidationThreshold * 100) : 70}%
+                </div>
                 <div className="text-sm text-muted-foreground">Umbral liquidación</div>
               </div>
             </div>
