@@ -1,10 +1,13 @@
 "use client"
 
-import { Button } from "@/components/ui/button"
+import { ConnectButton } from '@rainbow-me/rainbowkit'
 import { Badge } from "@/components/ui/badge"
-import { Wallet } from "lucide-react"
+import { useAccount } from 'wagmi'
+import { formatAddress } from '@/lib/utils'
 
 export function Header() {
+  const { address, isConnected } = useAccount()
+
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="container flex h-16 items-center justify-between px-4">
@@ -16,10 +19,15 @@ export function Header() {
         </div>
 
         <div className="flex items-center gap-4">
-          <Button variant="outline" className="gap-2 bg-transparent">
-            <Wallet className="h-4 w-4" />
-            Conectar wallet
-          </Button>
+          {isConnected && address && (
+            <div className="hidden md:flex items-center gap-2 text-sm text-muted-foreground">
+              <span>Conectado:</span>
+              <code className="bg-muted px-2 py-1 rounded text-xs">
+                {formatAddress(address)}
+              </code>
+            </div>
+          )}
+          <ConnectButton />
         </div>
       </div>
     </header>
