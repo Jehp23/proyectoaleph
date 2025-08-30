@@ -64,14 +64,14 @@ export default function HomePage() {
           <nav className="p-4 space-y-2">
             <Link
               href="/"
-              className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 border-l-4 border-blue-600"
+              className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300"
             >
               <Home className="h-4 w-4" />
               Inicio
             </Link>
             <Link
               href="/new"
-              className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300"
+              className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 border-l-4 border-blue-600"
             >
               <PlusCircle className="h-4 w-4" />
               Crear Vault
