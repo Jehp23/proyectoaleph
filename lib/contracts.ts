@@ -70,3 +70,17 @@ export const ABIS = {
 // Reexport para quienes lo necesiten
 export { loadAddresses }
 export type { Addresses }
+
+export function getContracts() {
+  const addresses = loadAddresses()
+
+  return {
+    vaultManager: addresses.vaultManager,
+    oracle: addresses.oracle,
+    wbtc: addresses.wbtc,
+    musd: addresses.musd,
+    vaultManagerAbi: ABIS.vaultManager,
+    oracleAbi: ABIS.oracle,
+    erc20Abi: ABIS.erc20,
+  }
+}
