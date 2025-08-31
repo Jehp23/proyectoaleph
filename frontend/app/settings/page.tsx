@@ -12,6 +12,7 @@ import { Settings, Code, Save, Palette, Sun, Moon } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { isAddress } from "viem";
 import { loadConfig, saveConfig, getPrice, type P2PConfig } from "@/lib/config-api";
+import addresses from "@/onchain/addresses.json";
 
 export default function SettingsPage() {
   const { toast } = useToast();
@@ -117,6 +118,35 @@ export default function SettingsPage() {
       toast({ title: "Oracle OK", description: text });
     } catch (e: any) {
       toast({ title: "No se pudo leer el oracle", description: e?.message ?? "", variant: "destructive" });
+    }
+  };
+
+  // NEW: Autocompletar desde addresses.json según red seleccionada
+  const onAutofill = () => {
+    try {
+      const src =
+        cfg.network === "localhost"
+          ? (addresses as any).localhost
+          : (addresses as any).sepolia;
+
+      if (!src) {
+        toast({ title: "No encontré direcciones para esa red", variant: "destructive" });
+        return;
+      }
+
+      const next = {
+        ...cfg,
+        loan: src.P2PSecuredLoan || cfg.loan,
+        usdtToken: (src.MockUSDC || src.USDT || cfg.usdtToken),
+        wethToken: (src.MockBTC || src.WETH || cfg.wethToken),
+        // priceOracle: opcional si lo guardás en el JSON para sepolia
+        priceOracle: src.PriceOracle || cfg.priceOracle || "",
+      };
+
+      setCfg(next);
+      toast({ title: "Direcciones precargadas", description: `Se tomaron de ${cfg.network}.` });
+    } catch (e: any) {
+      toast({ title: "No pude autocompletar", description: e?.message ?? "", variant: "destructive" });
     }
   };
 
@@ -273,6 +303,9 @@ export default function SettingsPage() {
                 <span className="text-muted-foreground">Chain ID:</span>
                 <span className="font-medium">{chainId}</span>
               </div>
+              <div className="mt-2 text-xs text-muted-foreground">
+                Asegurate de que MetaMask esté conectado a <b>{chainName}</b> (chainId {chainId}).
+              </div>
             </div>
           </CardContent>
         </Card>
@@ -291,6 +324,7 @@ export default function SettingsPage() {
               <div>
                 <span className="text-muted-foreground">Última actualización:</span>
                 <div className="font-medium">Agosto 2025</div>
+                <div className="text-xs text-muted-foreground mt-1">Frontend hecho en v0</div>
               </div>
             </div>
           </CardContent>

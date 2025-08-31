@@ -1,133 +1,135 @@
-from fastapi import FastAPI, Header, HTTPException
-from config import load_config, save_config
+# backend/main.py
+from fastapi import FastAPI, HTTPException, Request, Depends
 from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel, field_validator
 from web3 import Web3
-import os, json
 from dotenv import load_dotenv
-from pathlib import Path
+import os
 
-PLACEHOLDERS = {"0x...", "0x", "", None, "-"}
-
-def _checksum(addr: str | None) -> str | None:
-    """Devuelve la dirección en checksum o None si es placeholder/vacía."""
-    if addr is None:
-        return None
-    s = str(addr).strip()
-    if s in PLACEHOLDERS:
-        return None
-    # Aceptar sólo 0x válidas
-    if Web3.is_address(s):
-        return Web3.to_checksum_address(s)
-    # si no es válida, ignorala (o levantá si preferís estricto)
-    return None
-    # Si querés que falle en inválidas, cambialo por:
-    # raise ValueError(f"Dirección inválida: {addr}")
+from config import read_config, write_config
 
 load_dotenv()
 
-RPC_URL = os.getenv("RPC_URL", "http://127.0.0.1:8545")
-ADMIN_TOKEN = os.getenv("ADMIN_TOKEN")  # opcional para proteger PUT /config
+app = FastAPI(title="P2P Backend (Python)")
 
-app = FastAPI(title="Aleph Config API")
-
-# CORS: agrega el origen del front si querés restringir
+# ── CORS ──
+FRONT = os.getenv("FRONT_ORIGIN", "http://localhost:3000")
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"], allow_credentials=True, allow_methods=["*"], allow_headers=["*"],
+    allow_origins=[FRONT, "*"],   # si querés más estricto, sacá "*"
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
-# carga inicial
-CFG = load_config()
-w3 = Web3(Web3.HTTPProvider(RPC_URL))
+# ── Modelos ──
+class P2PConfig(BaseModel):
+    network: str         # "localhost" | "sepolia"
+    loan: str
+    usdtToken: str
+    wethToken: str
+    priceOracle: str | None = ""
 
-# Helpers para contratos (cámbialos según lo que leas)
-def get_vault_manager():
-    addr = CFG.get("vaultManager")
-    if not addr:
-        return None
-    abi_path = Path(__file__).parent / ".." / "frontend" / "onchain" / "abi" / "VaultManager.json"
-    abi = json.loads(abi_path.read_text())
-    return w3.eth.contract(address=Web3.to_checksum_address(addr), abi=abi)
+    @field_validator("network")
+    @classmethod
+    def v_network(cls, v):
+        if v not in ("localhost", "sepolia"):
+            raise ValueError("network inválida")
+        return v
 
-def get_p2p_loan():
-    addr = CFG.get("loan")
-    if not addr:
-        return None
-    abi_path = Path(__file__).parent / ".." / "frontend" / "onchain" / "abi" / "P2PSecuredLoan.json"
-    if not abi_path.exists():
-        abi_path = Path(__file__).parent / ".." / "frontend" / "onchain" / "abi" / "SecuredCrowdLoan.json"
-    abi = json.loads(abi_path.read_text())
-    return w3.eth.contract(address=Web3.to_checksum_address(addr), abi=abi)
+    @staticmethod
+    def _is_hex_addr(v: str) -> bool:
+        try:
+            return Web3.is_address(v)
+        except Exception:
+            return False
 
+    @field_validator("loan", "usdtToken", "wethToken", "priceOracle")
+    @classmethod
+    def v_addr(cls, v):
+        if v in (None, ""):
+            return v or ""
+        if not cls._is_hex_addr(v):
+            raise ValueError("dirección inválida")
+        return Web3.to_checksum_address(v)
+
+# ── Auth opcional ──
+ADMIN_TOKEN = os.getenv("ADMIN_TOKEN", "").strip()
+
+def require_admin(req: Request):
+    if not ADMIN_TOKEN:
+        return
+    auth = req.headers.get("Authorization", "")
+    if not auth.startswith("Bearer ") or auth.split(" ", 1)[1] != ADMIN_TOKEN:
+        raise HTTPException(status_code=401, detail="Unauthorized")
+
+# ── Rutas ──
 @app.get("/config")
-def read_config():
-    return CFG
+def get_config():
+    return read_config()
 
-@app.put("/config")
-def update_config(cfg: dict, x_admin_token: str | None = Header(default=None)):
-    # protección opcional
-    if ADMIN_TOKEN and x_admin_token != ADMIN_TOKEN:
-        raise HTTPException(status_code=401, detail="unauthorized")
-    global CFG
-    CFG = save_config(cfg)
-    return CFG
+@app.post("/config")
+def set_config(cfg: P2PConfig, _: None = Depends(require_admin)):
+    saved = write_config(cfg.model_dump())
+    return saved
 
-@app.get("/health")
-def health():
-    return {"ok": True, "block": w3.eth.block_number}
-
-@app.get("/status")
-def status():
-    # ejemplo: prioridad al P2P, sino VaultManager
-    loan = get_p2p_loan()
-    if loan:
-        st = int(loan.functions.currentState().call())
-        resp = {"kind": "p2p", "state": st}
-        for fn in ["loanAmount", "interestAmount", "collateralAmount", "totalFunded", "fundingDeadline", "dueDate"]:
-            if fn in [f.fn_name for f in loan.all_functions()]:
-                try:
-                    resp[fn] = int(getattr(loan.functions, fn)().call())
-                except Exception:
-                    pass
-        return resp
-    vm = get_vault_manager()
-    if vm:
-        # agrega aquí lecturas que te interesen del VaultManager
-        return {"kind": "vault", "address": CFG.get("vaultManager")}
-    return {"error": "no contracts configured"}
-# --- ORACLE (Chainlink) ---
+# ABI mínimo de Chainlink AggregatorV3
 AGG_ABI = [
-    {"inputs":[],"name":"decimals","outputs":[{"internalType":"uint8","name":"","type":"uint8"}],"stateMutability":"view","type":"function"},
-    {"inputs":[],"name":"description","outputs":[{"internalType":"string","name":"","type":"string"}],"stateMutability":"view","type":"function"},
-    {"inputs":[],"name":"latestRoundData","outputs":[
-        {"internalType":"uint80","name":"roundId","type":"uint80"},
-        {"internalType":"int256","name":"answer","type":"int256"},
-        {"internalType":"uint256","name":"startedAt","type":"uint256"},
-        {"internalType":"uint256","name":"updatedAt","type":"uint256"},
-        {"internalType":"uint80","name":"answeredInRound","type":"uint80"}
-    ],"stateMutability":"view","type":"function"}
+    {
+        "inputs": [],
+        "name": "latestRoundData",
+        "outputs": [
+            {"internalType":"uint80","name":"roundId","type":"uint80"},
+            {"internalType":"int256","name":"answer","type":"int256"},
+            {"internalType":"uint256","name":"startedAt","type":"uint256"},
+            {"internalType":"uint256","name":"updatedAt","type":"uint256"},
+            {"internalType":"uint80","name":"answeredInRound","type":"uint80"}
+        ],
+        "stateMutability":"view",
+        "type":"function"
+    },
+    {
+        "inputs": [],
+        "name": "description",
+        "outputs": [{"internalType":"string","name":"","type":"string"}],
+        "stateMutability":"view",
+        "type":"function"
+    }
 ]
 
-def get_oracle():
-    addr = CFG.get("priceOracle")
-    if not addr:
-        return None
-    return w3.eth.contract(address=Web3.to_checksum_address(addr), abi=AGG_ABI)
+@app.get("/oracle/price")
+def oracle_price():
+    cfg = read_config()
 
-@app.get("/price")
-def price():
-    """Devuelve precio del oracle configurado (Chainlink AggregatorV3Interface)."""
-    oracle = get_oracle()
+    # Elegir RPC según red
+    if cfg.get("network") == "sepolia":
+        rpc = os.getenv("SEPOLIA_RPC", "").strip()
+        if not rpc:
+            raise HTTPException(500, "Falta SEPOLIA_RPC en .env")
+    else:
+        rpc = os.getenv("LOCAL_RPC", "http://127.0.0.1:8545")
+
+    w3 = Web3(Web3.HTTPProvider(rpc))
+    if not w3.is_connected():
+        raise HTTPException(500, f"No conecta al RPC: {rpc}")
+
+    oracle = (cfg.get("priceOracle") or "").strip()
     if not oracle:
-        return {"error": "priceOracle not configured"}
-    dec = oracle.functions.decimals().call()
-    r = oracle.functions.latestRoundData().call()
-    # r[1] es int256 'answer' (precio * 10**dec)
-    return {
-        "description": oracle.functions.description().call(),
-        "decimals": int(dec),
-        "roundId": int(r[0]),
-        "answer": str(r[1]),
-        "updatedAt": int(r[3]),
-        "price": float(r[1]) / (10 ** dec)  # valor humano
-    }
+        # En localhost probablemente no tengas oracle: devolvemos dummy
+        return {"description": "Mock Oracle (localhost)", "price": "0"}
+
+    if not Web3.is_address(oracle):
+        raise HTTPException(400, "Oracle address inválida")
+
+    oracle = Web3.to_checksum_address(oracle)
+    contract = w3.eth.contract(address=oracle, abi=AGG_ABI)
+    try:
+        roundData = contract.functions.latestRoundData().call()
+        desc = contract.functions.description().call()
+        price = str(roundData[1])  # int256
+        return {"description": desc, "price": price}
+    except Exception as e:
+        raise HTTPException(500, f"Chainlink read error: {e}")
+
+
+# Run: uvicorn main:app --reload --port 4000

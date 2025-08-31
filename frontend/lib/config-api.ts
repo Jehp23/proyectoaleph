@@ -1,40 +1,35 @@
+// frontend/src/lib/config-api.ts
 export type P2PConfig = {
-  loan?: string;
-  usdtToken?: string;
-  wethToken?: string;
-  priceOracle?: string;            
-  network?: "sepolia" | "localhost";
+  network: "sepolia" | "localhost";
+  loan: string;        // P2PSecuredLoan
+  usdtToken: string;   // stable (MockUSDC en localhost)
+  wethToken: string;   // collateral (MockBTC en localhost)
+  priceOracle?: string;
 };
 
-const API_BASE =
-  process.env.NEXT_PUBLIC_BACKEND_URL ?? "http://localhost:8000";
+const API = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
 
 export async function loadConfig(): Promise<P2PConfig> {
-  const r = await fetch(`${API_BASE}/config`, { cache: "no-store" });
-  if (!r.ok) throw new Error("No se pudo leer la configuración");
+  const r = await fetch(`${API}/config`);
+  if (!r.ok) throw new Error("Load config failed");
   return r.json();
 }
 
-export async function saveConfig(
-  form: P2PConfig,
-  adminToken?: string
-): Promise<P2PConfig> {
-  const r = await fetch(`${API_BASE}/config`, {
-    method: "PUT",
+export async function saveConfig(cfg: P2PConfig, adminToken?: string): Promise<P2PConfig> {
+  const r = await fetch(`${API}/config`, {
+    method: "POST",
     headers: {
       "Content-Type": "application/json",
-      ...(adminToken ? { "x-admin-token": adminToken } : {}),
+      ...(adminToken ? { Authorization: `Bearer ${adminToken}` } : {}),
     },
-    body: JSON.stringify(form),
+    body: JSON.stringify(cfg),
   });
-  if (!r.ok) throw new Error("No se pudo guardar la configuración");
+  if (!r.ok) throw new Error(await r.text());
   return r.json();
 }
 
-export async function getPrice(): Promise<{
-  description?: string; decimals?: number; price?: number; updatedAt?: number;
-}> {
-  const r = await fetch(`${API_BASE}/price`, { cache: "no-store" });
-  if (!r.ok) throw new Error("No se pudo leer el precio del oracle");
+export async function getPrice(): Promise<{ description?: string; price?: string }> {
+  const r = await fetch(`${API}/oracle/price`);
+  if (!r.ok) throw new Error("Oracle price failed");
   return r.json();
 }

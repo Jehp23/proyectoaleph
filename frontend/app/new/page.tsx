@@ -11,6 +11,7 @@ import { TxModal } from "@/components/ui/tx-modal";
 import { Money } from "@/components/ui/money";
 import { LtvSlider } from "@/components/ui/ltv-slider";
 import { useStore } from "@/lib/store";
+import { useWallet } from "@/hooks/useWallet";
 import { ArrowLeft, ArrowRight, HelpCircle, Shield, Bitcoin } from "lucide-react";
 import {
   Tooltip,
@@ -28,6 +29,7 @@ import {
 
 export default function NewVaultPage() {
   const { createVault, btcPrice } = useStore();
+  const { address } = useWallet();
   const router = useRouter();
   const [currentStep, setCurrentStep] = useState(1);
   const [showTxModal, setShowTxModal] = useState(false);
@@ -104,13 +106,13 @@ export default function NewVaultPage() {
   const canCreate = canProceedStep1 && canProceedStep2;
 
   const handleCreateVault = async () => {
-    if (!canCreate) return;
+    if (!canCreate || !address) return;
 
     // Simulación de delay de tx
     await new Promise((resolve) => setTimeout(resolve, 1000));
 
     createVault({
-      owner: "0xYour...Address", // placeholder
+      owner: address,
       btcCollateral: btcCollateralSatoshis,
       usdtBorrowed: borrowAmountUsdt,
       ltv,
