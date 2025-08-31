@@ -2,37 +2,30 @@
   "name": "onchain",
   "version": "0.1.0",
   "private": true,
+
   "type": "module",
   "scripts": {
     "compile": "hardhat compile",
     "test": "hardhat test",
+    "node": "hardhat node",
+    "deploy:localhost": "hardhat run scripts/deploy.js --network localhost",
     "deploy:sepolia": "hardhat run scripts/deploy.js --network sepolia",
     "seed:sepolia": "hardhat run scripts/seed.js --network sepolia",
     "simulate-drop": "hardhat run scripts/simulate-drop.js --network sepolia",
     "export-abi": "node scripts/export-abi.js"
   },
   "dependencies": {
-    "@nomicfoundation/hardhat-chai-matchers": "latest",
-    "@nomicfoundation/hardhat-ethers": "latest",
-    "@nomicfoundation/hardhat-ignition-ethers": "latest",
-    "@nomicfoundation/hardhat-network-helpers": "latest",
-    "@nomicfoundation/hardhat-toolbox": "latest",
-    "@nomicfoundation/hardhat-verify": "latest",
-    "@openzeppelin/contracts": "^5.0.0",
-    "chai": "latest",
-    "dotenv": "latest",
-    "ethers": "latest",
-    "hardhat": "latest",
-    "solidity-coverage": "latest",
-    "ts-node": "latest",
-    "typechain": "latest"
+    "@openzeppelin/contracts": "^5.0.0"
   },
   "devDependencies": {
-    "hardhat": "latest",
-    "@nomicfoundation/hardhat-toolbox": "latest",
-    "ethers": "latest",
-    "dotenv": "latest",
-    "typescript": "^5",
-    "ts-node": "latest"
+    "@nomicfoundation/hardhat-ethers": "^4.0.0",
+    "@nomicfoundation/hardhat-ignition": "^3.0.0",
+    "@nomicfoundation/hardhat-ignition-ethers": "^3.0.0",
+    "dotenv": "^16.6.1",
+    "ethers": "^6.0.0",
+    "hardhat": "^3.0.0",
+    "ts-node": "^10.0.0",
+    "typechain": "^8.0.0",
+    "typescript": "^5.0.0"
   }
 }
