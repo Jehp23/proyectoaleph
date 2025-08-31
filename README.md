@@ -1,151 +1,70 @@
-📌 Proyecto P2P Secured Loan (Web3 Fullstack)
+# P2P Secured Loan dApp
 
-Este proyecto es una dApp fullstack en Web3 que permite crear préstamos P2P colateralizados usando contratos inteligentes en Solidity, un frontend en Next.js, y un backend en Node.js/Express.
+## Overview
 
-📂 Estructura del proyecto
-.
-├── frontend/         # Next.js app (UI de la dApp)
-│   ├── app/          # Rutas Next 13+
-│   ├── components/   # Componentes React
-│   ├── hooks/        # Hooks personalizados (ej. useP2P)
-│   ├── lib/          # Configuración ethers.js
-│   └── onchain/abis/ # ABIs de contratos
-│
-├── backend/          # API en Node.js/Express
-│   ├── src/          # Código fuente
-│   ├── abis/         # ABIs de contratos para backend
-│   └── .env          # Variables de entorno
-│
-└── onchain/          # Smart contracts (Hardhat)
-    ├── contracts/    # Solidity
-    ├── scripts/      # Scripts de deploy/test
-    ├── artifacts/    # Compilados (ignorado en git)
-    └── cache/        # Caché (ignorado en git)
+P2P Secured Loan is a decentralized application (dApp) that allows users to create peer-to-peer collateralized loans using smart contracts on Ethereum. The system is designed for educational and demo purposes, simulating a real loan flow with mock assets (stable and collateral) and running entirely in a local environment.
 
-🚀 Inicialización del proyecto
-1) Clonar repo e instalar dependencias
-git clone <repo-url>
-cd <repo>
+### Project Goals
+- Simulate a P2P lending protocol with collateral, liquidations, and risk management.
+- Integrate a modern fullstack stack: Solidity (onchain), FastAPI (backend), Next.js/React (frontend).
+- Allow users to experience the full cycle: deposit collateral, take loans, monitor vault health, and simulate liquidations.
 
-Frontend
-cd frontend
-npm install
+---
 
-Backend
-cd backend
-npm install
+## Architecture
 
-Onchain (Hardhat)
-cd onchain
-npm install
+- **Onchain (Smart Contracts):**
+  - Solidity contracts for mock tokens (ERC20), price oracle, and the main P2P loan contract.
+  - Deployed and tested with Hardhat on a local blockchain.
 
-2) Variables de entorno
-Frontend (frontend/.env.local)
-NEXT_PUBLIC_RPC_URL=http://127.0.0.1:8545
-NEXT_PUBLIC_CHAIN_ID=31337
-NEXT_PUBLIC_P2P_ADDRESS=0x...        # Address del contrato P2PSecuredLoan
-NEXT_PUBLIC_STABLE_ADDRESS=0x...     # Address del MockUSDC
-NEXT_PUBLIC_COLLATERAL_ADDRESS=0x... # Address del MockBTC
+- **Backend (API):**
+  - FastAPI in Python exposes REST endpoints for configuration and price queries (mock or Chainlink).
+  - Allows managing contract addresses and simulating oracle responses.
 
-Backend (backend/.env)
-RPC_URL=http://127.0.0.1:8545
-P2P_ADDRESS=0x...
-STABLE_ADDRESS=0x...
-COLLATERAL_ADDRESS=0x...
-PRIVATE_KEY=0x...      # PK de una cuenta de testing del nodo Hardhat
-PORT=4000
+- **Frontend (UI):**
+  - Next.js + React 18, with ethers.js v6 integration.
+  - Intuitive interface to create vaults, take loans, monitor risks, and manage configuration.
+  - Direct connection with MetaMask and the local Hardhat network.
 
-3) Levantar la blockchain local
+---
 
-Desde /onchain:
+## Main Modules
 
-npm run node
+- `onchain/`  → Smart contracts and deployment scripts.
+- `backend/`  → REST API for configuration and oracles.
+- `frontend/` → User interface, hooks, and contract interaction logic.
 
+---
 
-Esto inicia un nodo Hardhat en http://127.0.0.1:8545 con 20 cuentas preconfiguradas con 10,000 ETH falsos.
+## Usage Flow
+1. The user connects their wallet (MetaMask) to the local network.
+2. They can create a vault by depositing collateral (mock BTC).
+3. Request a loan in a stablecoin (mock USDT), the contract manages LTV and vault health.
+4. The user can monitor status, add collateral, repay debt, or simulate liquidations.
+5. All price logic can be mock or integrated with Chainlink on testnet.
 
-Importar una de esas private keys en MetaMask → red Localhost 8545 (chainId 31337).
+---
 
-4) Deployar contratos
+## Local Execution
+For detailed installation, deployment, and usage instructions in a local environment, see [`README_LOCAL.md`](./README_LOCAL.md).
 
-Podés usar Remix IDE o scripts de Hardhat.
+---
 
-Ejemplo con Remix:
+## Main Technologies
+- Solidity 0.8.x (contracts)
+- Hardhat 3.x (onchain dev environment)
+- Python 3.10+ and FastAPI (backend)
+- Next.js 13+/React 18, TypeScript, ethers.js v6 (frontend)
 
-Deployar MockERC20 (stable) → guardar address.
+---
 
-Deployar MockERC20 (collateral) → guardar address.
+## Project Status
+- Project in beta version, intended for testing and learning.
+- Do not use on mainnet or with real funds.
 
-Deployar P2PSecuredLoan con:
+---
 
-stable = address del MockUSDC
-
-collateral = address del MockBTC
-
-borrower = dirección de MetaMask
-
-loanAmount, interestAmount, collateralAmount en wei
-
-fundingDeadline, repayDate en timestamps futuros
-
-Actualizar addresses en .env.local y .env.
-
-5) Levantar servicios
-Backend
-cd backend
-npm run dev
+**Developed in 2025. ALEPH HACKATHON**
 
 
-API disponible en: http://localhost:4000
 
-Frontend
-cd frontend
-npm run dev
-
-
-App disponible en: http://localhost:3000
-
-🔑 Scripts útiles
-Frontend
-
-npm run dev → arranca la app Next.js
-
-npm run build → compila para producción
-
-Backend
-
-npm run dev → arranca servidor Express
-
-Onchain
-
-npm run node → arranca blockchain local (Hardhat)
-
-npm run compile → compila contratos
-
-npm run test → corre tests
-
-📖 Requisitos previos
-
-Node.js
- (v18+)
-
-MetaMask
-
-Hardhat
-
-Remix IDE
- (opcional, para deploy manual)
-
-🛠️ Tech Stack
-
-Solidity (Smart contracts)
-
-Hardhat (testing, deploy, blockchain local)
-
-Next.js 13+ (frontend React)
-
-Ethers.js v6 (interacción con contratos)
-
-Express.js (backend API)
-
-MetaMask (wallet)
