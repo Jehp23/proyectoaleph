@@ -23,7 +23,7 @@ app.add_middleware(
 )
 
 # ── Modelos ──
-class P2PConfig(BaseModel):
+class P2PConfiguration(BaseModel):
     network: str         # "localhost" | "sepolia"
     loan: str
     usdtToken: str
@@ -69,7 +69,7 @@ def get_config():
     return read_config()
 
 @app.post("/config")
-def set_config(cfg: P2PConfig, _: None = Depends(require_admin)):
+def set_config(cfg: P2PConfiguration, _: None = Depends(require_admin)):
     saved = write_config(cfg.model_dump())
     return saved
 
