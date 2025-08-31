@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.20;
+pragma solidity ^0.8.28;
 
 interface IERC20{function transfer(address,uint256) external returns(bool);function transferFrom(address,address,uint256) external returns(bool);}
 library SafeERC20{function safeTransfer(IERC20 t,address to,uint256 v) internal {require(t.transfer(to,v),"ERC20: transfer failed");}function safeTransferFrom(IERC20 t,address f,address to,uint256 v) internal {require(t.transferFrom(f,to,v),"ERC20: transferFrom failed");}}

@@ -1,17 +1,36 @@
-# Frontend
-frontend/node_modules/
-frontend/.next/
-frontend/dist/
+# ───── Node.js / Next.js ─────
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
 
-# Onchain
-onchain/node_modules/
+# Build & cache
+.next/
+.out/
+dist/
+build/
+.cache/
+.turbo/
+.vercel/
+
+# ───── Hardhat ─────
 onchain/artifacts/
 onchain/cache/
-onchain/coverage/
 
-# Backend
-backend/.venv/
+# ───── Python (si mantenés backend en py) ─────
 __pycache__/
+*.pyc
+.venv/
 
-# OS
+# ───── Env / config sensibles ─────
+.env
+.env.local
+.env.*
+*.secret
+
+# ───── IDE / OS ─────
+.vscode/
+.idea/
 .DS_Store
+Thumbs.db
